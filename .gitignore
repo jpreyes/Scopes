@@ -28,6 +28,18 @@ dist-ssr
 .playwright/
 
 # Root screenshots (from testing)
+/image1.png
+/image2.png
+/image3.png
+/image4.png
+/image5.png
+/image6.png
+/image7.png
+/image8.png
+/image9.png
+/image10.png
+/image11.png
+/image12.png
 responsive-*.png
 costeo-*.png
 gantt-*.png
@@ -38,3 +50,5 @@ page-bottom.png
 presupuesto-full.png
 page-*.yml
 page-*.log
+mobile-snap.md
+/src/assets/hero.png

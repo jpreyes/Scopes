@@ -1,9 +1,14 @@
 <script setup>
 import { usePresupuesto } from '../stores/presupuesto.js'
 import RichTextEditor from './RichTextEditor.vue'
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 
-const { state, fmt, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections } = usePresupuesto()
+const { state, fmt, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections, saveBudget, loadBudget } = usePresupuesto()
+
+function handlePrint() {
+  state.activeTab = 'propuesta'
+  nextTick(() => window.print())
+}
 
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 const PHASE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
@@ -60,7 +65,15 @@ function ganttBarStyle(t) {
         <span class="font-bold text-text text-[11px] tracking-wider uppercase">Contacto:</span>
         <input type="text" v-model="state.contactPerson" class="border border-border rounded-lg px-2.5 py-1 text-sm w-48 sm:w-56 focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" placeholder="Nombre contacto" />
       </div>
-      <span class="text-xl sm:text-2xl font-extrabold text-text tracking-wider">{{ state.quoteNumber }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xl sm:text-2xl font-extrabold text-text tracking-wider">{{ state.quoteNumber }}</span>
+        <span class="text-border mx-1 hidden sm:inline">|</span>
+        <div class="flex gap-1.5">
+          <button @click="saveBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition cursor-pointer">Guardar</button>
+          <button @click="loadBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-bg-app text-text-muted border border-border hover:bg-gray-50 hover:text-text transition cursor-pointer">Cargar</button>
+          <button @click="handlePrint" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer">Imprimir</button>
+        </div>
+      </div>
     </div>
 
     <!-- Meta row -->

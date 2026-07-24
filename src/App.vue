@@ -16,7 +16,7 @@ const icons = {
   historial: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
 }
 
-const { state, computed, fmt, loadHistorial, saveBudget, loadBudget, syncPropuestaSections } = usePresupuesto()
+const { state, loadHistorial } = usePresupuesto()
 
 onMounted(() => {
   const today = new Date()
@@ -29,11 +29,6 @@ onMounted(() => {
   if (state.printSections.gantt === undefined) state.printSections.gantt = true
   loadHistorial()
 })
-
-function handlePrint() {
-  state.activeTab = 'propuesta'
-  nextTick(() => window.print())
-}
 </script>
 
 <template>
@@ -54,11 +49,6 @@ function handlePrint() {
             <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
               class="text-[10px] sm:text-xs text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
           </div>
-        </div>
-        <div class="flex gap-1.5 sm:gap-2 no-print">
-          <button @click="saveBudget" class="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition cursor-pointer border border-white/10">Guardar</button>
-          <button @click="loadBudget" class="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition cursor-pointer border border-white/10">Cargar</button>
-          <button @click="handlePrint" class="px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-lg bg-white text-text hover:shadow-lg transition cursor-pointer">Imprimir</button>
         </div>
       </header>
 

@@ -59,7 +59,7 @@ const state = reactive({
   sidebarOpen: true,
   activeTab: 'propuesta',
   tabs: [
-    { id: 'propuesta', label: 'Propuesta' },
+    { id: 'propuesta', label: 'Documento' },
     { id: 'gantt', label: 'Carta Gantt' },
     { id: 'costeo', label: 'Costeo Interno' },
   ],

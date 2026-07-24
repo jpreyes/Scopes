@@ -26,7 +26,8 @@ dist-ssr
 # Playwright test artifacts
 .playwright-mcp/
 .playwright/
-*-5*.png
+
+# Root screenshots (from testing)
 responsive-*.png
 costeo-*.png
 gantt-*.png
@@ -34,3 +35,6 @@ final-*.png
 violet-theme.png
 after-refresh.png
 page-bottom.png
+presupuesto-full.png
+page-*.yml
+page-*.log

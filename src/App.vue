@@ -40,26 +40,26 @@ function handlePrint() {
     <div class="max-w-6xl mx-auto bg-surface rounded-2xl shadow-xl border border-border">
 
       <!-- HEADER -->
-      <header class="bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-6 py-4 flex items-center justify-between border-b border-white/5">
-        <div class="flex items-center gap-4">
-          <img src="/images/image1.png" alt="Logo" class="h-10 w-auto" />
-          <div class="leading-tight">
-            <h1 class="text-lg font-bold tracking-wide">OFERTA TÉCNICO-ECONÓMICA</h1>
+      <header class="bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between border-b border-white/5">
+        <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+          <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
+          <div class="leading-tight min-w-0 flex-1">
+            <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">OFERTA TÉCNICO-ECONÓMICA</h1>
             <input type="text" v-model="state.subheader"
-              class="text-sm text-white/80 placeholder-white/40 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-md px-0" />
+              class="text-xs sm:text-sm text-white/80 placeholder-white/40 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
             <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
-              class="text-xs text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-xs px-0" />
+              class="text-[10px] sm:text-xs text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
           </div>
         </div>
-        <div class="flex gap-2 no-print">
-          <button @click="saveBudget" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition cursor-pointer border border-white/10">Guardar</button>
-          <button @click="loadBudget" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition cursor-pointer border border-white/10">Cargar</button>
-          <button @click="handlePrint" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-text hover:shadow-lg transition cursor-pointer">Imprimir / PDF</button>
+        <div class="flex gap-1.5 sm:gap-2 no-print">
+          <button @click="saveBudget" class="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition cursor-pointer border border-white/10">Guardar</button>
+          <button @click="loadBudget" class="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition cursor-pointer border border-white/10">Cargar</button>
+          <button @click="handlePrint" class="px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-lg bg-white text-text hover:shadow-lg transition cursor-pointer">Imprimir</button>
         </div>
       </header>
 
       <!-- TABS -->
-      <div class="flex border-b border-border bg-bg-app px-6 no-print">
+      <div class="flex overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print">
         <button v-for="t in state.tabs" :key="t.id"
           class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer"
           :class="state.activeTab === t.id ? 'text-primary border-primary bg-surface' : 'text-text-muted border-transparent hover:text-text hover:border-border'"
@@ -70,7 +70,7 @@ function handlePrint() {
       </div>
 
       <!-- CONTENT (hidden on print) -->
-      <div class="p-6 no-print">
+      <div class="p-3 sm:p-6 no-print">
         <PropuestaTab v-if="state.activeTab === 'propuesta'" />
         <GanttTab v-else-if="state.activeTab === 'gantt'" />
         <CosteoInterno v-else-if="state.activeTab === 'costeo'" />

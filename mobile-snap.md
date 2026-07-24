@@ -1,0 +1,65 @@
+- generic [ref=f4e4]:
+  - banner [ref=f4e5]:
+    - generic [ref=f4e6]:
+      - img "Logo" [ref=f4e7]
+      - generic [ref=f4e8]
+    - generic [ref=f4e12]:
+      - button "Guardar" [ref=f4e13] [cursor=pointer]
+      - button "Cargar" [ref=f4e14] [cursor=pointer]
+      - button "Imprimir / PDF" [ref=f4e15] [cursor=pointer]
+  - generic [ref=f4e16]:
+    - button "Propuesta" [ref=f4e17] [cursor=pointer]
+    - button "Carta Gantt" [ref=f4e22] [cursor=pointer]
+    - button "Costeo Interno" [ref=f4e26] [cursor=pointer]
+    - button "Historial" [ref=f4e29] [cursor=pointer]
+  - generic [ref=f4e35]:
+    - generic [ref=f4e36]:
+      - generic [ref=f4e37]
+      - generic [ref=f4e40]: CT-PS-001-2026
+    - generic [ref=f4e41]:
+      - generic [ref=f4e42]
+      - generic [ref=f4e45]
+      - generic [ref=f4e48]
+      - generic [ref=f4e51]
+    - generic [ref=f4e54]:
+      - generic [ref=f4e55]
+      - generic [ref=f4e63]
+    - generic [ref=f4e71]:
+      - generic [ref=f4e72]
+      - generic [ref=f4e78]
+    - generic [ref=f4e100]:
+      - generic [ref=f4e101]
+      - generic [ref=f4e107]
+    - generic [ref=f4e129]:
+      - generic [ref=f4e130]
+      - generic [ref=f4e136]
+    - generic [ref=f4e158]:
+      - generic [ref=f4e159]
+      - generic [ref=f4e165]
+    - generic [ref=f4e187]:
+      - generic [ref=f4e188]
+      - generic [ref=f4e194]
+    - generic [ref=f4e216]:
+      - generic [ref=f4e217]
+      - generic [ref=f4e223]
+    - generic [ref=f4e245]:
+      - generic [ref=f4e246]
+      - generic [ref=f4e252]
+    - button "+ Agregar sección" [ref=f4e274] [cursor=pointer]
+    - generic [ref=f4e275]:
+      - heading "PROPUESTA ECONÓMICA" [level=2] [ref=f4e276]
+      - table [ref=f4e279]
+      - button "+ Agregar item" [ref=f4e300] [cursor=pointer]
+    - generic [ref=f4e301]:
+      - generic [ref=f4e302]
+      - generic [ref=f4e305]
+      - generic [ref=f4e308]
+      - generic [ref=f4e311]
+    - generic [ref=f4e314]:
+      - heading "CARTA GANTT" [level=2] [ref=f4e315]
+      - table [ref=f4e318]
+      - button "+ Agregar sección" [ref=f4e562] [cursor=pointer]
+      - generic [ref=f4e563]: 14 días de alcance
+    - generic [ref=f4e564]:
+      - generic [ref=f4e565]
+      - generic [ref=f4e568]

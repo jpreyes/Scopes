@@ -127,7 +127,7 @@ let newGroupName = ''
                 </div>
               </div>
 
-              <button @click="removeCosteoItem(cat, i)" class="text-red-400 hover:text-red-600 text-lg px-1 opacity-30 hover:opacity-100 transition cursor-pointer">&times;</button>
+              <button @click="removeCosteoItem(cat, i)" class="text-red-400 hover:text-red-600 text-lg px-1 opacity-30 hover:opacity-100 transition cursor-pointer shrink-0">&times;</button>
             </div>
           </div>
 
@@ -140,7 +140,7 @@ let newGroupName = ''
     </div>
 
     <!-- RIGHT: groups panel -->
-    <div class="md:w-[340px] w-full shrink-0 space-y-3 md:overflow-y-auto md:max-h-[calc(100vh-13rem)] md:border-l md:border-border md:pl-5">
+    <div class="md:w-[340px] w-full shrink-0 space-y-3 md:overflow-y-auto md:max-h-[calc(100vh-13rem)] md:border-l md:border-border md:pl-5 pt-4 md:pt-0 border-t md:border-t-0 border-border">
 
         <div class="flex items-center gap-2">
           <input v-model="newGroupName" @keyup.enter="addCosteoGroup(newGroupName); newGroupName = ''"

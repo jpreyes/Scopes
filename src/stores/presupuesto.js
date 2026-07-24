@@ -453,6 +453,17 @@ function loadDashboardData() {
 }
 
 function seedSampleData() {
+  // Seed clients
+  const sampleClients = [
+    { id: 'c1', name: 'Carlos Muñoz', company: 'Constructora Los Andes', email: 'carlos@clandes.cl', phone: '+56 9 8111 0001', address: 'Av. Libertador 1500, Santiago', notes: 'Cliente frecuente - obras civiles' },
+    { id: 'c2', name: 'Roberto Ávila', company: 'Mina El Teniente', email: 'ravila@codelco.cl', phone: '+56 9 8222 0002', address: 'Rancagua, Región del Libertador', notes: 'Contacto directo en operaciones' },
+    { id: 'c3', name: 'Pablo Rojas', company: 'Edifica SpA', email: 'projas@edifica.cl', phone: '+56 9 8333 0003', address: 'Nueva Costanera 3200, Vitacura', notes: 'Proyectos inmobiliarios' },
+    { id: 'c4', name: 'Andrés Salinas', company: 'Puentes del Sur', email: 'asalinas@puentessur.cl', phone: '+56 9 8444 0004', address: 'Talca, Región del Maule', notes: 'Obras de infraestructura vial' },
+    { id: 'c5', name: 'Luis Vega', company: 'Hormigones Nacionales', email: 'lvega@hormigon.cl', phone: '+56 9 8555 0005', address: 'Panamericana Norte 5000, Quilicura', notes: 'Planta de hormigón' },
+    { id: 'c6', name: 'Camila Flores', company: 'Arquidiseño Ltda', email: 'cflores@arquidiseno.cl', phone: '+56 9 8666 0006', address: 'Providencia 2450, Santiago', notes: 'Oficina de arquitectura' },
+  ]
+  localStorage.setItem('presto_clients', JSON.stringify(sampleClients))
+
   const samples = [
     {
       quoteNumber: 'CT-PS-001-2026', quoteDate: '2026-07-15', clientName: 'Constructora Los Andes',

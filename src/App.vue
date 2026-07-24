@@ -106,6 +106,9 @@ function handlePrint() {
               <p class="text-sm mt-1">Productos y servicios — próximamente</p>
             </div>
 
+            <!-- Historial -->
+            <HistorialTab v-else-if="state.activeSection === 'historial'" />
+
             <!-- Configuración -->
             <div v-else-if="state.activeSection === 'config'" class="text-center py-16 text-text-muted">
               <p class="text-lg font-semibold">Configuración</p>

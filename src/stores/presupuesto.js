@@ -62,7 +62,6 @@ const state = reactive({
     { id: 'propuesta', label: 'Propuesta' },
     { id: 'gantt', label: 'Carta Gantt' },
     { id: 'costeo', label: 'Costeo Interno' },
-    { id: 'historial', label: 'Historial' },
   ],
 
   quoteNumber: 'CT-PS-001-2026',

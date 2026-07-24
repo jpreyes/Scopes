@@ -55,6 +55,8 @@ function makeDefaultCosteo() {
 }
 
 const state = reactive({
+  activeSection: 'propuestas',
+  sidebarOpen: true,
   activeTab: 'propuesta',
   tabs: [
     { id: 'propuesta', label: 'Propuesta' },

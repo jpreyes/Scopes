@@ -2,6 +2,7 @@
 import { onMounted, nextTick } from 'vue'
 import { usePresupuesto } from './stores/presupuesto.js'
 import CoverPage from './components/CoverPage.vue'
+import Sidebar from './components/Sidebar.vue'
 import PropuestaTab from './components/PropuestaTab.vue'
 import CosteoInterno from './components/CosteoInterno.vue'
 import GanttTab from './components/GanttTab.vue'
@@ -42,6 +43,9 @@ function handlePrint() {
       <!-- HEADER -->
       <header class="bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between border-b border-white/5">
         <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+          <button @click="state.sidebarOpen = !state.sidebarOpen" class="shrink-0 text-white/60 hover:text-white transition cursor-pointer p-1 -ml-1" title="Menú">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
           <div class="leading-tight min-w-0 flex-1">
             <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">OFERTA TÉCNICO-ECONÓMICA</h1>
@@ -58,23 +62,57 @@ function handlePrint() {
         </div>
       </header>
 
-      <!-- TABS -->
-      <div class="flex overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print">
-        <button v-for="t in state.tabs" :key="t.id"
-          class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer"
-          :class="state.activeTab === t.id ? 'text-primary border-primary bg-surface' : 'text-text-muted border-transparent hover:text-text hover:border-border'"
-          @click="state.activeTab = t.id">
-          <span v-html="icons[t.id]"></span>
-          {{ t.label }}
-        </button>
-      </div>
+      <!-- SIDEBAR + CONTENT -->
+      <div class="flex">
+        <Sidebar />
 
-      <!-- CONTENT (hidden on print) -->
-      <div class="p-3 sm:p-6 no-print">
-        <PropuestaTab v-if="state.activeTab === 'propuesta'" />
-        <GanttTab v-else-if="state.activeTab === 'gantt'" />
-        <CosteoInterno v-else-if="state.activeTab === 'costeo'" />
-        <HistorialTab v-else-if="state.activeTab === 'historial'" />
+        <div class="flex-1 min-w-0">
+          <!-- TABS (solo para sección propuestas) -->
+          <div v-if="state.activeSection === 'propuestas'" class="flex overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print">
+            <button v-for="t in state.tabs" :key="t.id"
+              class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer shrink-0"
+              :class="state.activeTab === t.id ? 'text-primary border-primary bg-surface' : 'text-text-muted border-transparent hover:text-text hover:border-border'"
+              @click="state.activeTab = t.id">
+              <span v-html="icons[t.id]"></span>
+              {{ t.label }}
+            </button>
+          </div>
+
+          <!-- CONTENT -->
+          <div class="p-3 sm:p-6 no-print">
+            <!-- Propuestas sub-tabs -->
+            <template v-if="state.activeSection === 'propuestas'">
+              <PropuestaTab v-if="state.activeTab === 'propuesta'" />
+              <GanttTab v-else-if="state.activeTab === 'gantt'" />
+              <CosteoInterno v-else-if="state.activeTab === 'costeo'" />
+              <HistorialTab v-else-if="state.activeTab === 'historial'" />
+            </template>
+
+            <!-- Dashboard -->
+            <div v-else-if="state.activeSection === 'dashboard'" class="text-center py-16 text-text-muted">
+              <p class="text-lg font-semibold">Dashboard</p>
+              <p class="text-sm mt-1">Resumen y estadísticas — próximamente</p>
+            </div>
+
+            <!-- Clientes -->
+            <div v-else-if="state.activeSection === 'clientes'" class="text-center py-16 text-text-muted">
+              <p class="text-lg font-semibold">Clientes</p>
+              <p class="text-sm mt-1">Gestión de clientes — próximamente</p>
+            </div>
+
+            <!-- Catálogo -->
+            <div v-else-if="state.activeSection === 'catalogo'" class="text-center py-16 text-text-muted">
+              <p class="text-lg font-semibold">Catálogo</p>
+              <p class="text-sm mt-1">Productos y servicios — próximamente</p>
+            </div>
+
+            <!-- Configuración -->
+            <div v-else-if="state.activeSection === 'config'" class="text-center py-16 text-text-muted">
+              <p class="text-lg font-semibold">Configuración</p>
+              <p class="text-sm mt-1">Ajustes de la aplicación — próximamente</p>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>

@@ -43,7 +43,7 @@ onMounted(() => {
           </button>
           <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
           <div class="leading-tight min-w-0 flex-1">
-            <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">OFERTA TÉCNICO-ECONÓMICA</h1>
+            <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">Scopes</h1>
             <input type="text" v-model="state.subheader"
               class="text-xs sm:text-sm text-white/80 placeholder-white/40 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
             <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
@@ -120,7 +120,7 @@ onMounted(() => {
       <div class="print-header">
         <img src="/images/image1.png" alt="Logo" class="h-8" />
         <div>
-          <h1>OFERTA TÉCNICO-ECONÓMICA</h1>
+          <h1>Propuesta</h1>
           <p>{{ state.quoteNumber }}</p>
         </div>
       </div>

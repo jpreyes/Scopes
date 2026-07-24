@@ -13,6 +13,15 @@ function handlePrint() {
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 const PHASE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
+const STATUS_OPTS = [
+  { value: 'borrador', label: 'Borrador', color: 'bg-gray-400' },
+  { value: 'enviada', label: 'Enviada', color: 'bg-blue-500' },
+  { value: 'revision', label: 'En Revisión', color: 'bg-amber-500' },
+  { value: 'aprobada', label: 'Aprobada', color: 'bg-emerald-500' },
+  { value: 'rechazada', label: 'Rechazada', color: 'bg-red-500' },
+  { value: 'adjudicada', label: 'Adjudicada', color: 'bg-primary' },
+]
+
 function calcGanttHeaders(span, unit) {
   if (unit === 'month' || unit === 'year') {
     const label = unit === 'month' ? 'MES' : 'AÑO'
@@ -89,6 +98,27 @@ function ganttBarStyle(t) {
           <option v-for="o in m.opts" :key="o" :value="o">{{ o }}</option>
         </select>
         <input v-else :type="m.type" v-model="state[m.key]" class="border border-border rounded-lg px-2 py-1 text-xs bg-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 mb-5 bg-surface border border-border/80 rounded-xl shadow-sm">
+      <div class="flex items-center gap-2 text-xs">
+        <span class="font-semibold text-text-muted uppercase">Estado:</span>
+        <select v-model="state.proposalStatus" class="border border-border rounded-lg px-2 py-1 text-xs bg-surface outline-none focus:border-primary">
+          <option v-for="opt in STATUS_OPTS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+        </select>
+        <span class="w-2 h-2 rounded-full" :class="(STATUS_OPTS.find(o => o.value === state.proposalStatus) || {}).color"></span>
+      </div>
+      <template v-if="state.proposalStatus === 'adjudicada'">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="font-semibold text-text-muted uppercase">Monto:</span>
+          <input type="number" v-model.number="state.awardAmount" min="0" class="w-28 px-2 py-1 border border-border rounded text-xs text-right bg-surface outline-none focus:border-primary" />
+        </div>
+      </template>
+      <div class="flex items-center gap-2 text-xs flex-1 min-w-0">
+        <span class="font-semibold text-text-muted uppercase shrink-0">Notas:</span>
+        <input type="text" v-model="state.projectNotes" placeholder="Notas del proyecto…" class="flex-1 min-w-0 px-2 py-1 border border-border rounded text-xs bg-surface outline-none focus:border-primary" />
       </div>
     </div>
 

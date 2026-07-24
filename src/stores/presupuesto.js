@@ -68,6 +68,9 @@ const state = reactive({
   quoteRev: '01',
   quoteDate: '',
   validUntil: '',
+  proposalStatus: 'borrador',
+  awardAmount: null,
+  projectNotes: '',
   currency: '$',
   contactPerson: '',
 
@@ -273,6 +276,7 @@ function collectData() {
   return {
     ...state.quoteNumber && { quoteNumber: state.quoteNumber },
     quoteRev: state.quoteRev, quoteDate: state.quoteDate, validUntil: state.validUntil,
+    proposalStatus: state.proposalStatus, awardAmount: state.awardAmount, projectNotes: state.projectNotes,
     currency: state.currency, contactPerson: state.contactPerson,
     company: state.company, companyAddr: state.companyAddr,
     companyPhone: state.companyPhone, companyEmail: state.companyEmail,
@@ -325,6 +329,9 @@ function loadBudgetByNum(qn) {
     validUntil: data.validUntil || '',
     currency: data.currency || '$',
     contactPerson: data.contactPerson || '',
+    proposalStatus: data.proposalStatus || 'borrador',
+    awardAmount: data.awardAmount || null,
+    projectNotes: data.projectNotes || '',
     company: data.company || '', companyAddr: data.companyAddr || '',
     companyPhone: data.companyPhone || '', companyEmail: data.companyEmail || '',
     companyResp: data.companyResp || '', companyRespSig: data.companyRespSig || '',
@@ -390,10 +397,20 @@ function deleteBudget(qn) {
 
 function loadHistorial() {
   const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
+  const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
+  const STATUS_COLORS = { borrador: 'bg-gray-400', enviada: 'bg-blue-500', revision: 'bg-amber-500', aprobada: 'bg-emerald-500', rechazada: 'bg-red-500', adjudicada: 'bg-primary' }
   state.budgetList = list.slice().reverse().map(item => {
     const full = JSON.parse(localStorage.getItem('presto_' + item.quoteNumber.replace(/\//g, '_')))
     const total = full ? full.proposalItems.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0) : 0
-    return { ...item, total: fmtAmount(total, full?.currency || '$') }
+    const status = full?.proposalStatus || 'borrador'
+    return {
+      ...item,
+      total: fmtAmount(total, full?.currency || '$'),
+      status,
+      statusLabel: STATUS_LABELS[status] || 'Borrador',
+      statusColor: STATUS_COLORS[status] || 'bg-gray-400',
+      awardAmount: full?.awardAmount || null,
+    }
   })
 }
 

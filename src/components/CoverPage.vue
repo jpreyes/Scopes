@@ -11,7 +11,7 @@ const { state } = usePresupuesto()
       <div class="mb-6 bg-white/10 backdrop-blur-sm px-8 py-4 rounded-2xl">
         <img src="/images/image1.png" alt="Logo" class="h-14 opacity-90 mx-auto" />
       </div>
-      <h1 class="text-4xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg mb-3">OFERTA TÉCNICO-ECONÓMICA</h1>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg mb-3">{{ state.subheader || 'Propuesta' }}</h1>
       <h2 class="text-xl md:text-2xl font-medium opacity-90 mb-4">{{ state.subheader }}</h2>
       <div class="text-2xl md:text-3xl font-bold tracking-[0.15em] uppercase px-8 py-3 border-2 border-white/30 rounded-xl mb-6">
         {{ state.headerClient || state.clientName || 'CLIENTE' }}

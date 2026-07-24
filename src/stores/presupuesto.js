@@ -137,6 +137,7 @@ const state = reactive({
   loadVersion: 0,
   budgetList: [],
   dashboardData: { total: 0, counts: {}, totalAwardAmount: '$ 0', recent: [] },
+  clients: [],
   toast: '',
 })
 
@@ -644,6 +645,23 @@ function seedSampleData() {
   loadDashboardData()
   toast('Datos de ejemplo cargados ✓')
 }
+function loadClients() {
+  state.clients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+}
+function saveClient(client) {
+  const list = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+  const idx = list.findIndex(c => c.id === client.id)
+  if (idx >= 0) { list[idx] = client } else { list.push(client) }
+  localStorage.setItem('presto_clients', JSON.stringify(list))
+  loadClients()
+  toast('Cliente guardado ✓')
+}
+function deleteClient(id) {
+  const list = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+  localStorage.setItem('presto_clients', JSON.stringify(list.filter(c => c.id !== id)))
+  loadClients()
+  toast('Cliente eliminado ✓')
+}
 function addPropuestaSection() {
   const n = state.propuestaSections.length + 1
   state.propuestaSections.push({ id: uid(), label: `SECCIÓN ${String(n).padStart(2, '0')}`, content: '' })
@@ -755,7 +773,7 @@ export function usePresupuesto() {
     syncSelectedToProposal,
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
-    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData,
+    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient,
     exportCosteoExcel, exportHistorialExcel, toast,
   }
 }

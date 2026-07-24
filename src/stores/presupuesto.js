@@ -136,6 +136,7 @@ const state = reactive({
 
   loadVersion: 0,
   budgetList: [],
+  dashboardData: { total: 0, counts: {}, totalAwardAmount: '$ 0', recent: [] },
   toast: '',
 })
 
@@ -315,6 +316,7 @@ function saveBudget() {
   localStorage.setItem(key, JSON.stringify(data))
   generateQuoteNumber()
   loadHistorial()
+  loadDashboardData()
   toast('Guardado ✓')
 }
 
@@ -393,6 +395,7 @@ function deleteBudget(qn) {
   list = list.filter(x => x.quoteNumber !== qn)
   localStorage.setItem('presto_list', JSON.stringify(list))
   loadHistorial()
+  loadDashboardData()
 }
 
 function loadHistorial() {
@@ -412,6 +415,40 @@ function loadHistorial() {
       awardAmount: full?.awardAmount || null,
     }
   })
+}
+
+function loadDashboardData() {
+  const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
+  const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
+  const counts = { borrador: 0, enviada: 0, revision: 0, aprobada: 0, rechazada: 0, adjudicada: 0 }
+  let totalAwardAmount = 0
+  const recent = []
+
+  list.slice().reverse().forEach(item => {
+    const key = 'presto_' + item.quoteNumber.replace(/\//g, '_')
+    const full = JSON.parse(localStorage.getItem(key))
+    if (!full) return
+    const status = full.proposalStatus || 'borrador'
+    counts[status] = (counts[status] || 0) + 1
+    if (full.awardAmount) totalAwardAmount += Number(full.awardAmount)
+    const total = full.proposalItems.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+    recent.push({
+      quoteNumber: item.quoteNumber,
+      client: item.client || '-',
+      date: item.date || '-',
+      status,
+      statusLabel: STATUS_LABELS[status] || 'Borrador',
+      total: fmtAmount(total, full?.currency || '$'),
+    })
+  })
+
+  recent.sort((a, b) => new Date(b.date) - new Date(a.date))
+  state.dashboardData = {
+    total: list.length,
+    counts,
+    totalAwardAmount: fmtAmount(totalAwardAmount, '$'),
+    recent: recent.slice(0, 6),
+  }
 }
 
 function addPropuestaSection() {
@@ -525,7 +562,7 @@ export function usePresupuesto() {
     syncSelectedToProposal,
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
-    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial,
+    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData,
     exportCosteoExcel, exportHistorialExcel, toast,
   }
 }

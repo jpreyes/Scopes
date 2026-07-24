@@ -1,0 +1,53 @@
+- generic [ref=f3e4]:
+  - banner [ref=f3e5]:
+    - generic [ref=f3e6]:
+      - img "Logo" [ref=f3e7]
+      - generic [ref=f3e8]:
+        - heading "OFERTA TÉCNICO-ECONÓMICA" [level=1] [ref=f3e9]
+        - textbox [ref=f3e10]: LEVANTAMIENTO Y ESTUDIO DE LOSA
+        - textbox "Cliente" [ref=f3e11]
+    - generic [ref=f3e12]:
+      - button "Guardar" [ref=f3e13] [cursor=pointer]
+      - button "Cargar" [ref=f3e14] [cursor=pointer]
+      - button "Imprimir / PDF" [ref=f3e15] [cursor=pointer]
+  - generic [ref=f3e16]:
+    - button "Propuesta" [ref=f3e17] [cursor=pointer]
+    - button "Carta Gantt" [ref=f3e22] [cursor=pointer]
+    - button "Costeo Interno" [active] [ref=f3e26] [cursor=pointer]
+    - button "Historial" [ref=f3e29] [cursor=pointer]
+  - generic [ref=f3e576]:
+    - generic [ref=f3e577]:
+      - generic [ref=f3e578]:
+        - heading "COSTEO INTERNO CONFIDENCIAL" [level=2] [ref=f3e579]
+        - generic [ref=f3e580]
+      - generic [ref=f3e585]:
+        - generic [ref=f3e586]: Margen
+        - combobox [ref=f3e587]
+        - generic [ref=f3e588]
+        - generic [ref=f3e591]: P.Venta = Costo × (1 + margen%)
+      - generic [ref=f3e592]:
+        - generic [ref=f3e593]
+        - generic [ref=f3e668]
+        - generic [ref=f3e759]
+        - generic [ref=f3e850]
+      - button "+ Agregar categoría" [ref=f3e941] [cursor=pointer]
+    - generic [ref=f3e942]:
+      - generic [ref=f3e943]:
+        - textbox "Nuevo grupo…" [ref=f3e944]
+        - button "+" [ref=f3e945] [cursor=pointer]
+      - generic [ref=f3e946]:
+        - generic [ref=f3e947]
+        - generic [ref=f3e952]: Arrastra items aquí
+      - generic [ref=f3e954]:
+        - generic [ref=f3e955]
+        - generic [ref=f3e960]: Arrastra items aquí
+      - generic [ref=f3e962]:
+        - generic [ref=f3e963]
+        - generic [ref=f3e968]: Arrastra items aquí
+      - generic [ref=f3e970]:
+        - generic [ref=f3e971]
+        - generic [ref=f3e974]
+        - generic [ref=f3e977]
+        - generic [ref=f3e980]
+      - button "→ Sincronizar a Propuesta" [ref=f3e983] [cursor=pointer]
+      - button "Exportar a Excel" [ref=f3e984] [cursor=pointer]

@@ -1,0 +1,300 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - img "Logo" [ref=e7]
+      - generic [ref=e8]:
+        - heading "OFERTA TÉCNICO-ECONÓMICA" [level=1] [ref=e9]
+        - textbox [ref=e10]: LEVANTAMIENTO Y ESTUDIO DE LOSA
+        - textbox "Cliente" [ref=e11]
+    - generic [ref=e12]:
+      - button "Guardar" [ref=e13] [cursor=pointer]
+      - button "Cargar" [ref=e14] [cursor=pointer]
+      - button "Imprimir / PDF" [ref=e15] [cursor=pointer]
+  - generic [ref=e16]:
+    - button "📄 Propuesta" [ref=e17] [cursor=pointer]
+    - button "📅 Carta Gantt" [ref=e18] [cursor=pointer]
+    - button "📊 Costeo Interno" [ref=e19] [cursor=pointer]
+    - button "📋 Historial" [ref=e20] [cursor=pointer]
+  - generic [ref=e22]:
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: "CONTACTO:"
+        - textbox [ref=e26]
+      - generic [ref=e27]: CT-PS-001-2026
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]: "Fecha:"
+        - textbox [ref=e31]: 2026-07-22
+      - generic [ref=e32]:
+        - generic [ref=e33]: "Válido hasta:"
+        - textbox [ref=e34]: 2026-08-21
+      - generic [ref=e35]:
+        - generic [ref=e36]: "Revisión:"
+        - textbox [ref=e37]: "01"
+      - generic [ref=e38]:
+        - generic [ref=e39]: "Moneda:"
+        - combobox [ref=e40]:
+          - option "$" [selected]
+          - option "US$"
+          - option "€"
+          - option "UF"
+    - generic [ref=e41]:
+      - generic [ref=e42]: "Imprimir:"
+      - generic [ref=e43] [cursor=pointer]:
+        - checkbox "01 PRESENTACIÓN" [ref=e44]
+        - generic [ref=e45]: 01 PRESENTACIÓN
+      - generic [ref=e46] [cursor=pointer]:
+        - checkbox "02 SERVICIO" [ref=e47]
+        - generic [ref=e48]: 02 SERVICIO
+      - generic [ref=e49] [cursor=pointer]:
+        - checkbox "03 OBJETIVO" [ref=e50]
+        - generic [ref=e51]: 03 OBJETIVO
+      - generic [ref=e52] [cursor=pointer]:
+        - checkbox "04 ALCANCE DEL SERVICIO" [ref=e53]
+        - generic [ref=e54]: 04 ALCANCE DEL SERVICIO
+      - generic [ref=e55] [cursor=pointer]:
+        - checkbox "05 VENTAJAS Y DIFERENCIADORES" [ref=e56]
+        - generic [ref=e57]: 05 VENTAJAS Y DIFERENCIADORES
+      - generic [ref=e58] [cursor=pointer]:
+        - checkbox "06 NOTAS / CONDICIONES" [ref=e59]
+        - generic [ref=e60]: 06 NOTAS / CONDICIONES
+      - generic [ref=e61] [cursor=pointer]:
+        - checkbox "07 ENTREGABLES" [ref=e62]
+        - generic [ref=e63]: 07 ENTREGABLES
+      - generic [ref=e64] [cursor=pointer]:
+        - checkbox "Prop. Económica" [ref=e65]
+        - generic [ref=e66]: Prop. Económica
+      - generic [ref=e67] [cursor=pointer]:
+        - checkbox "Carta Gantt" [ref=e68]
+        - generic [ref=e69]: Carta Gantt
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - heading "EMPRESA" [level=3] [ref=e72]
+        - textbox "company" [ref=e73]: Predikta Solutions SpA
+        - textbox "Addr" [ref=e74]: Santiago, Chile
+        - textbox "Phone" [ref=e75]: +56 9 1234 5678
+        - textbox "Email" [ref=e76]: contacto@predikta.cl
+        - textbox "Responsable" [ref=e77]
+      - generic [ref=e78]:
+        - heading "CLIENTE" [level=3] [ref=e79]
+        - textbox "Nombre" [ref=e80]
+        - textbox "Addr" [ref=e81]
+        - textbox "Phone" [ref=e82]
+        - textbox "Email" [ref=e83]
+        - textbox "Responsable" [ref=e84]
+    - generic [ref=e85]:
+      - generic [ref=e86]:
+        - heading "01 PRESENTACIÓN" [level=3] [ref=e87]:
+          - text: "01"
+          - textbox [ref=e88]: PRESENTACIÓN
+        - button "×" [ref=e89]
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - button "B" [ref=e92] [cursor=pointer]
+          - button "I" [ref=e93] [cursor=pointer]
+          - button "•" [ref=e94] [cursor=pointer]
+          - button "1." [ref=e95] [cursor=pointer]
+          - button "🖼" [ref=e96] [cursor=pointer]
+          - button "🔗" [ref=e97] [cursor=pointer]
+        - textbox [ref=e99]:
+          - paragraph [ref=e100]: Escribe aquí…
+    - generic [ref=e101]:
+      - generic [ref=e102]:
+        - heading "02 SERVICIO" [level=3] [ref=e103]:
+          - text: "02"
+          - textbox [ref=e104]: SERVICIO
+        - button "×" [ref=e105]
+      - generic [ref=e106]:
+        - generic [ref=e107]:
+          - button "B" [ref=e108] [cursor=pointer]
+          - button "I" [ref=e109] [cursor=pointer]
+          - button "•" [ref=e110] [cursor=pointer]
+          - button "1." [ref=e111] [cursor=pointer]
+          - button "🖼" [ref=e112] [cursor=pointer]
+          - button "🔗" [ref=e113] [cursor=pointer]
+        - textbox [ref=e115]:
+          - paragraph [ref=e116]: Escribe aquí…
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - heading "03 OBJETIVO" [level=3] [ref=e119]:
+          - text: "03"
+          - textbox [ref=e120]: OBJETIVO
+        - button "×" [ref=e121]
+      - generic [ref=e122]:
+        - generic [ref=e123]:
+          - button "B" [ref=e124] [cursor=pointer]
+          - button "I" [ref=e125] [cursor=pointer]
+          - button "•" [ref=e126] [cursor=pointer]
+          - button "1." [ref=e127] [cursor=pointer]
+          - button "🖼" [ref=e128] [cursor=pointer]
+          - button "🔗" [ref=e129] [cursor=pointer]
+        - textbox [ref=e131]:
+          - paragraph [ref=e132]: Escribe aquí…
+    - generic [ref=e133]:
+      - generic [ref=e134]:
+        - heading "04 ALCANCE DEL SERVICIO" [level=3] [ref=e135]:
+          - text: "04"
+          - textbox [ref=e136]: ALCANCE DEL SERVICIO
+        - button "×" [ref=e137]
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - button "B" [ref=e140] [cursor=pointer]
+          - button "I" [ref=e141] [cursor=pointer]
+          - button "•" [ref=e142] [cursor=pointer]
+          - button "1." [ref=e143] [cursor=pointer]
+          - button "🖼" [ref=e144] [cursor=pointer]
+          - button "🔗" [ref=e145] [cursor=pointer]
+        - textbox [ref=e147]:
+          - paragraph [ref=e148]: Escribe aquí…
+    - generic [ref=e149]:
+      - generic [ref=e150]:
+        - heading "05 VENTAJAS Y DIFERENCIADORES" [level=3] [ref=e151]:
+          - text: "05"
+          - textbox [ref=e152]: VENTAJAS Y DIFERENCIADORES
+        - button "×" [ref=e153]
+      - generic [ref=e154]:
+        - generic [ref=e155]:
+          - button "B" [ref=e156] [cursor=pointer]
+          - button "I" [ref=e157] [cursor=pointer]
+          - button "•" [ref=e158] [cursor=pointer]
+          - button "1." [ref=e159] [cursor=pointer]
+          - button "🖼" [ref=e160] [cursor=pointer]
+          - button "🔗" [ref=e161] [cursor=pointer]
+        - textbox [ref=e163]:
+          - paragraph [ref=e164]: Escribe aquí…
+    - generic [ref=e165]:
+      - generic [ref=e166]:
+        - heading "06 NOTAS / CONDICIONES" [level=3] [ref=e167]:
+          - text: "06"
+          - textbox [ref=e168]: NOTAS / CONDICIONES
+        - button "×" [ref=e169]
+      - generic [ref=e170]:
+        - generic [ref=e171]:
+          - button "B" [ref=e172] [cursor=pointer]
+          - button "I" [ref=e173] [cursor=pointer]
+          - button "•" [ref=e174] [cursor=pointer]
+          - button "1." [ref=e175] [cursor=pointer]
+          - button "🖼" [ref=e176] [cursor=pointer]
+          - button "🔗" [ref=e177] [cursor=pointer]
+        - textbox [ref=e179]:
+          - paragraph [ref=e180]: Escribe aquí…
+    - generic [ref=e181]:
+      - generic [ref=e182]:
+        - heading "07 ENTREGABLES" [level=3] [ref=e183]:
+          - text: "07"
+          - textbox [ref=e184]: ENTREGABLES
+        - button "×" [ref=e185]
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - button "B" [ref=e188] [cursor=pointer]
+          - button "I" [ref=e189] [cursor=pointer]
+          - button "•" [ref=e190] [cursor=pointer]
+          - button "1." [ref=e191] [cursor=pointer]
+          - button "🖼" [ref=e192] [cursor=pointer]
+          - button "🔗" [ref=e193] [cursor=pointer]
+        - textbox [ref=e195]:
+          - paragraph [ref=e196]: Escribe aquí…
+    - button "+ Agregar sección" [ref=e197] [cursor=pointer]
+    - generic [ref=e198]:
+      - heading "PROPUESTA ECONÓMICA" [level=2] [ref=e199]
+      - table [ref=e200]:
+        - rowgroup [ref=e201]:
+          - row "ITEM DESCRIPCIÓN CANT. P. UNITARIO TOTAL" [ref=e202]:
+            - columnheader "ITEM" [ref=e203]
+            - columnheader "DESCRIPCIÓN" [ref=e204]
+            - columnheader "CANT." [ref=e205]
+            - columnheader "P. UNITARIO" [ref=e206]
+            - columnheader "TOTAL" [ref=e207]
+            - columnheader [ref=e208]
+        - rowgroup [ref=e209]:
+          - row "1.1 $ 0 ×" [ref=e210]:
+            - cell "1.1" [ref=e211]
+            - cell [ref=e212]
+            - cell [ref=e214]
+            - cell [ref=e216]
+            - cell "$ 0" [ref=e218]
+            - cell "×" [ref=e219]
+      - button "+ Agregar item" [ref=e221] [cursor=pointer]
+    - generic [ref=e222]:
+      - generic [ref=e223]:
+        - generic [ref=e224]: Subtotal
+        - generic [ref=e225]: $ 0
+      - generic [ref=e226]:
+        - generic [ref=e227]: IVA / Impuesto (%)
+        - spinbutton [ref=e228]: "19"
+      - generic [ref=e229]:
+        - generic [ref=e230]: Monto Impuesto
+        - generic [ref=e231]: $ 0
+      - generic [ref=e232]:
+        - generic [ref=e233]: Total
+        - generic [ref=e234]: $ 0
+    - generic [ref=e235]:
+      - heading "06 CARTA GANTT" [level=2] [ref=e236]
+      - table [ref=e238]:
+        - rowgroup [ref=e239]:
+          - row "TAREA ENE" [ref=e240]:
+            - columnheader "TAREA" [ref=e241]
+            - columnheader "ENE" [ref=e242]
+          - row "SEM 1 SEM 1" [ref=e243]:
+            - columnheader "SEM 1" [ref=e244]
+            - columnheader "SEM 1" [ref=e245]
+          - row "1 2 3 4 5 6 7 8 9 10 11 12 13 14" [ref=e246]:
+            - columnheader "1" [ref=e247]
+            - columnheader "2" [ref=e248]
+            - columnheader "3" [ref=e249]
+            - columnheader "4" [ref=e250]
+            - columnheader "5" [ref=e251]
+            - columnheader "6" [ref=e252]
+            - columnheader "7" [ref=e253]
+            - columnheader "8" [ref=e254]
+            - columnheader "9" [ref=e255]
+            - columnheader "10" [ref=e256]
+            - columnheader "11" [ref=e257]
+            - columnheader "12" [ref=e258]
+            - columnheader "13" [ref=e259]
+            - columnheader "14" [ref=e260]
+        - rowgroup [ref=e261]:
+          - row "CAPTURA DE DATOS" [ref=e262]:
+            - cell "CAPTURA DE DATOS" [ref=e263]
+          - row "Acreditación empresa y personal Acreditación empresa y personal" [ref=e264]:
+            - cell "Acreditación empresa y personal" [ref=e265]
+            - cell "Acreditación empresa y personal" [ref=e267]
+          - row "Inducción personal Inducción personal" [ref=e284]:
+            - cell "Inducción personal" [ref=e285]
+            - cell "Inducción personal" [ref=e287]
+          - row "Auscultación de armadura Auscultación de armadura" [ref=e304]:
+            - cell "Auscultación de armadura" [ref=e305]
+            - cell "Auscultación de armadura" [ref=e307]
+          - row "Ensayo carbonatación del hormigón Ensayo carbonatación del hormigón" [ref=e324]:
+            - cell "Ensayo carbonatación del hormigón" [ref=e325]
+            - cell "Ensayo carbonatación del hormigón" [ref=e327]
+          - row "Ensayos ultrasónicos Ensayos ultrasónicos" [ref=e344]:
+            - cell "Ensayos ultrasónicos" [ref=e345]
+            - cell "Ensayos ultrasónicos" [ref=e347]
+          - row "Índice esclerométrico Índice esclerométrico" [ref=e364]:
+            - cell "Índice esclerométrico" [ref=e365]
+            - cell "Índice esclerométrico" [ref=e367]
+          - row "Levantamiento geométrico Levantamiento geométrico" [ref=e384]:
+            - cell "Levantamiento geométrico" [ref=e385]
+            - cell "Levantamiento geométrico" [ref=e387]
+          - row "ANÁLISIS DE DATOS" [ref=e404]:
+            - cell "ANÁLISIS DE DATOS" [ref=e405]
+          - row "Estudios y laboratorio Estudios y laboratorio" [ref=e406]:
+            - cell "Estudios y laboratorio" [ref=e407]
+            - cell "Estudios y laboratorio" [ref=e409]
+          - row "Elaboración de informes Elaboración de informes" [ref=e426]:
+            - cell "Elaboración de informes" [ref=e427]
+            - cell "Elaboración de informes" [ref=e429]
+          - row "Entrega informes y recomendaciones Entrega informes y recomendaciones" [ref=e446]:
+            - cell "Entrega informes y recomendaciones" [ref=e447]
+            - cell "Entrega informes y recomendaciones" [ref=e449]
+      - button "+ Agregar tarea" [ref=e466] [cursor=pointer]
+    - generic [ref=e467]:
+      - generic [ref=e468]:
+        - text: POR EMPRESA
+        - textbox [ref=e470]
+        - text: Responsable
+      - generic [ref=e471]:
+        - text: POR CLIENTE
+        - textbox [ref=e473]
+        - text: Responsable

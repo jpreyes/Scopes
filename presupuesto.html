@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presupuesto Rápido</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/dist/sortable.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="container">
+      <!-- HEADER -->
+      <header>
+        <div class="header-left">
+          <img src="image1.png" alt="Logo" class="logo">
+          <div class="header-titles">
+            <h1>OFERTA TÉCNICO-ECONÓMICA</h1>
+            <h2>{{ subheader }}</h2>
+            <h3>{{ clientName || 'Cliente' }}</h3>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button @click="saveBudget" class="btn-secondary">Guardar</button>
+          <button @click="loadBudget" class="btn-secondary">Cargar</button>
+          <button @click="printPage" class="btn-print">Imprimir / PDF</button>
+        </div>
+      </header>
+
+      <!-- TABS -->
+      <div class="tabs">
+        <button v-for="t in tabs" :key="t.id" class="tab-btn"
+          :class="{ active: activeTab === t.id }" @click="activeTab = t.id">
+          <span class="tab-icon">{{ t.icon }}</span> {{ t.label }}
+        </button>
+      </div>
+
+      <!-- ======================== TAB: PORTADA ======================== -->
+      <div v-show="activeTab === 'portada'" class="tab-content">
+        <div class="cover-page">
+          <div class="cover-bg" :style="{ backgroundImage: 'url(' + coverBg + ')' }">
+            <div class="cover-overlay"></div>
+            <div class="cover-content">
+              <div class="cover-logo">
+                <img src="image1.png" alt="Logo" class="cover-logo-img">
+              </div>
+              <h1 class="cover-title">OFERTA TÉCNICO-ECONÓMICA</h1>
+              <h2 class="cover-subtitle">{{ subheader }}</h2>
+              <div class="cover-client">{{ clientName || 'CLIENTE' }}</div>
+              <div class="cover-divider"></div>
+              <div class="cover-ref">{{ quoteNumber }}</div>
+              <div class="cover-meta">
+                <span>Contacto: {{ contactPerson || '—' }}</span>
+                <span>Fecha: {{ quoteDate }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="cover-editor">
+            <div class="cover-field">
+              <label>Subtítulo</label>
+              <input type="text" v-model="subheader" placeholder="Título del proyecto">
+            </div>
+            <div class="cover-field">
+              <label>Cliente</label>
+              <input type="text" v-model="clientName" placeholder="Nombre del cliente">
+            </div>
+            <div class="cover-field">
+              <label>Contacto</label>
+              <input type="text" v-model="contactPerson" placeholder="Persona de contacto">
+            </div>
+            <div class="cover-field">
+              <label>Imagen de portada</label>
+              <div class="cover-image-select">
+                <button v-for="img in coverImages" :key="img"
+                  @click="coverBg = img"
+                  :class="{ active: coverBg === img }">
+                  {{ img }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================== TAB: PROPUESTA ======================== -->
+      <div v-show="activeTab === 'propuesta'" class="tab-content">
+        <!-- Drop zone for costeo items -->
+        <div class="drop-zone" id="proposalDropZone"
+          @dragenter.prevent @dragover.prevent
+          :class="{ 'drop-active': dragOver }">
+          <div class="drop-hint" v-if="proposalItems.length === 0">
+            <span class="drop-icon">⬇</span>
+            <p>Arrastra items desde <strong>Costeo</strong> o agrégalos manualmente</p>
+          </div>
+          <div class="drop-hint-inline" v-else>
+            <span class="drop-icon-small">⬇</span> Arrastra más items desde Costeo
+          </div>
+        </div>
+
+        <!-- Reference & meta -->
+        <div class="ref-row">
+          <div class="ref-left">
+            <span class="ref-label">CONTACTO:</span>
+            <input type="text" v-model="contactPerson" placeholder="Nombre contacto">
+          </div>
+          <div class="ref-right">
+            <span class="ref-number">{{ quoteNumber }}</span>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <div><span class="info-label">FECHA:</span> <input type="date" v-model="quoteDate" class="info-input"></div>
+          <div><span class="info-label">VÁLIDO HASTA:</span> <input type="date" v-model="validUntil" class="info-input"></div>
+          <div><span class="info-label">REVISIÓN:</span> <input type="text" v-model="quoteRev" class="info-input"></div>
+          <div><span class="info-label">MONEDA:</span>
+            <select v-model="currency" class="info-input">
+              <option value="$">$ CLP</option>
+              <option value="US$">US$ USD</option>
+              <option value="€">€ EUR</option>
+              <option value="UF">UF</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-block">
+            <h2>EMPRESA</h2>
+            <input type="text" v-model="company" placeholder="Nombre">
+            <input type="text" v-model="companyAddr" placeholder="Dirección">
+            <input type="text" v-model="companyPhone" placeholder="Teléfono">
+            <input type="email" v-model="companyEmail" placeholder="Email">
+            <label class="resp-label">Responsable:</label>
+            <input type="text" v-model="companyResp" placeholder="Nombre">
+          </div>
+          <div class="info-block">
+            <h2>CLIENTE</h2>
+            <input type="text" v-model="clientName" placeholder="Nombre">
+            <input type="text" v-model="clientAddr" placeholder="Dirección">
+            <input type="text" v-model="clientPhone" placeholder="Teléfono">
+            <input type="email" v-model="clientEmail" placeholder="Email">
+            <label class="resp-label">Responsable:</label>
+            <input type="text" v-model="clientResp" placeholder="Nombre">
+          </div>
+        </div>
+
+        <!-- Sections -->
+        <div class="prop-section" v-for="s in sections" :key="s.key">
+          <h3>{{ s.label }}</h3>
+          <textarea v-model="s.value" :placeholder="s.placeholder" :rows="s.rows"></textarea>
+        </div>
+
+        <!-- Proposal items -->
+        <section class="items-section">
+          <h2>PROPUESTA ECONÓMICA</h2>
+          <table>
+            <thead>
+              <tr>
+                <th class="col-item">ITEM</th>
+                <th class="col-desc">DESCRIPCIÓN</th>
+                <th class="col-qty">CANT.</th>
+                <th class="col-price">P. UNITARIO</th>
+                <th class="col-total">TOTAL</th>
+                <th class="col-action"></th>
+              </tr>
+            </thead>
+            <tbody id="proposalItemsBody">
+              <tr v-for="(item, i) in proposalItems" :key="item._key">
+                <td class="col-item">{{ i + 1 }}.1</td>
+                <td><input type="text" v-model="item.desc" placeholder="Descripción"></td>
+                <td><input type="number" v-model.number="item.qty" min="1" class="item-qty"></td>
+                <td><input type="number" v-model.number="item.price" min="0" step="1" class="item-price"></td>
+                <td class="item-total">{{ fmt(item.qty * item.price) }}</td>
+                <td><button class="btn-remove" @click="removeProposalItem(i)">&times;</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <button @click="addProposalItem" class="btn-add">+ Agregar item</button>
+        </section>
+
+        <!-- Totals -->
+        <section class="totals-section">
+          <div class="totals-row">
+            <label>Subtotal</label>
+            <span>{{ fmt(proposalSubtotal) }}</span>
+          </div>
+          <div class="totals-row">
+            <label>IVA / Impuesto (%)</label>
+            <input type="number" v-model.number="taxRate" min="0" max="100" step="0.01">
+          </div>
+          <div class="totals-row">
+            <label>Monto Impuesto</label>
+            <span>{{ fmt(proposalTax) }}</span>
+          </div>
+          <div class="totals-row total-final">
+            <label>Total</label>
+            <span>{{ fmt(proposalTotal) }}</span>
+          </div>
+        </section>
+
+        <!-- Signatures -->
+        <div class="signatures">
+          <div class="sig-block">
+            <label>POR EMPRESA</label>
+            <div class="sig-line"></div>
+            <input type="text" v-model="companyRespSig" placeholder="Nombre">
+            <span>Responsable</span>
+          </div>
+          <div class="sig-block">
+            <label>POR CLIENTE</label>
+            <div class="sig-line"></div>
+            <input type="text" v-model="clientRespSig" placeholder="Nombre">
+            <span>Responsable</span>
+          </div>
+        </div>
+
+        <div class="notes-section" v-for="s in notesSections" :key="s.key">
+          <h2>{{ s.label }}</h2>
+          <textarea v-model="s.value" rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- ======================== TAB: COSTEO ======================== -->
+      <div v-show="activeTab === 'costeo'" class="tab-content">
+        <div class="costeo-header">
+          <h2>COSTEO INTERNO <span class="badge-conf">CONFIDENCIAL</span></h2>
+          <div class="costeo-meta">
+            <label>N°: <span>{{ quoteNumber }}</span></label>
+            <label>Cliente: <span>{{ clientName || '-' }}</span></label>
+          </div>
+        </div>
+
+        <div class="costeo-markup">
+          <label>Margen de venta</label>
+          <div class="markup-slider">
+            <input type="range" v-model.number="costeoMarkup" min="0" max="200" step="1">
+            <span class="markup-value">{{ costeoMarkup }}%</span>
+          </div>
+          <span class="markup-hint">P. Venta = P. Costo × (1 + {{ costeoMarkup }}%)</span>
+        </div>
+
+        <div class="costeo-grid">
+          <div v-for="cat in costeoCategories" :key="cat.id" class="costeo-card">
+            <div class="costeo-card-header">
+              <h3>{{ cat.label }}</h3>
+              <div class="costeo-card-total">{{ fmt(catTotal(cat)) }}</div>
+            </div>
+            <div class="costeo-card-body" :id="'costeoList-' + cat.id">
+              <div v-for="(item, i) in cat.items" :key="item._key"
+                class="costeo-item" draggable="true"
+                @dragstart="onDragStart($event, cat.id, i)"
+                :class="{ 'selected': item._sel }">
+                <div class="costeo-item-handle" @click="item._sel = !item._sel">
+                  <span class="handle-dots">{{ item._sel ? '✓' : '☰' }}</span>
+                </div>
+                <div class="costeo-item-body">
+                  <input type="text" v-model="item.desc" class="cst-desc" placeholder="Descripción">
+                  <div class="costeo-item-fields">
+                    <label>Cant. <input type="number" v-model.number="item.qty" min="0" class="cst-num"></label>
+                    <label>Días <input type="number" v-model.number="item.days" min="0" class="cst-num"></label>
+                    <label>Costo <input type="number" v-model.number="item.cost" min="0" step="1" class="cst-num"
+                      @input="recalcSale(item)"></label>
+                    <label>Venta <input type="number" v-model.number="item.sale" min="0" step="1" class="cst-num"></label>
+                    <span class="cst-line-total">{{ fmt(item.qty * item.days * item.sale) }}</span>
+                  </div>
+                </div>
+                <button class="btn-remove" @click="removeCosteoItem(cat, i)" :title="'Eliminar ' + item.desc">&times;</button>
+              </div>
+            </div>
+            <button @click="addCosteoItem(cat)" class="btn-add">+ Agregar item</button>
+          </div>
+        </div>
+
+        <div class="costeo-summary">
+          <div class="summary-left">
+            <div class="summary-item">
+              <span class="summary-label">Total Costos Directos</span>
+              <span class="summary-value">{{ fmt(costeoTotalCost) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Total Venta (seleccionados)</span>
+              <span class="summary-value sale">{{ fmt(costeoTotalSale) }}</span>
+            </div>
+          </div>
+          <div class="summary-right">
+            <div class="summary-item">
+              <span class="summary-label">Utilidad estimada</span>
+              <span class="summary-value util">{{ fmt(costeoUtilidad) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Margen sobre venta</span>
+              <span class="summary-value margen">{{ costeoMargen }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="costeo-actions">
+          <button @click="syncSelectedToProposal" class="btn-primary">
+            → Sincronizar seleccionados a Propuesta
+            <span class="badge" v-if="selectedCount > 0">{{ selectedCount }}</span>
+          </button>
+          <button @click="exportCosteoExcel" class="btn-excel">Exportar a Excel</button>
+        </div>
+      </div>
+
+      <!-- ======================== TAB: HISTORIAL ======================== -->
+      <div v-show="activeTab === 'historial'" class="tab-content">
+        <div class="historial-header">
+          <h2>HISTORIAL DE PRESUPUESTOS</h2>
+          <div class="historial-actions">
+            <button @click="exportHistorialExcel" class="btn-excel">Exportar Historial</button>
+          </div>
+        </div>
+
+        <div v-if="budgetList.length === 0" class="empty-state">
+          <span class="empty-icon">📋</span>
+          <p>No hay presupuestos guardados aún.</p>
+        </div>
+
+        <table v-else class="historial-table">
+          <thead>
+            <tr><th>N°</th><th>Cliente</th><th>Fecha</th><th>Total</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="b in budgetList" :key="b.quoteNumber">
+              <td>{{ b.quoteNumber }}</td>
+              <td>{{ b.client || '-' }}</td>
+              <td>{{ b.date || '-' }}</td>
+              <td>{{ b.displayTotal }}</td>
+              <td class="historial-actions-cell">
+                <button @click="loadBudgetByNum(b.quoteNumber)" class="btn-sm">Cargar</button>
+                <button @click="deleteBudget(b.quoteNumber)" class="btn-sm danger">Eliminar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

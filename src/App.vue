@@ -32,7 +32,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app">
+  <div class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-auto">
 
     <!-- HEADER -->
     <header class="sticky top-0 z-20 bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between">

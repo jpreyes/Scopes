@@ -55,12 +55,12 @@ function ganttBarStyle(t) {
 <template>
   <div>
     <!-- Reference row -->
-    <div class="flex justify-between items-center bg-gradient-to-r from-gray-50 to-white border border-border/80 rounded-xl px-5 py-3.5 mb-4 shadow-sm">
+    <div class="flex flex-wrap gap-y-2 justify-between items-center bg-gradient-to-r from-gray-50 to-white border border-border/80 rounded-xl px-5 py-3.5 mb-4 shadow-sm">
       <div class="flex items-center gap-2 text-sm">
         <span class="font-bold text-text text-[11px] tracking-wider uppercase">Contacto:</span>
-        <input type="text" v-model="state.contactPerson" class="border border-border rounded-lg px-2.5 py-1 text-sm w-56 focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" placeholder="Nombre contacto" />
+        <input type="text" v-model="state.contactPerson" class="border border-border rounded-lg px-2.5 py-1 text-sm w-48 sm:w-56 focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" placeholder="Nombre contacto" />
       </div>
-      <span class="text-2xl font-extrabold text-text tracking-wider">{{ state.quoteNumber }}</span>
+      <span class="text-xl sm:text-2xl font-extrabold text-text tracking-wider">{{ state.quoteNumber }}</span>
     </div>
 
     <!-- Meta row -->
@@ -124,7 +124,7 @@ function ganttBarStyle(t) {
         <span class="w-1 h-4 bg-emerald-500 rounded-full inline-block"></span>
         PROPUESTA ECONÓMICA
       </h2>
-      <div class="border border-border/80 rounded-xl overflow-hidden shadow-sm">
+      <div class="border border-border/80 rounded-xl overflow-x-auto shadow-sm">
         <table class="w-full">
           <thead>
             <tr class="bg-gradient-to-r from-slate-800 to-slate-700 text-white text-[11px] uppercase tracking-wider">

@@ -38,8 +38,8 @@ const sections = [
 
 <template>
   <aside
-    class="bg-surface border-r border-border flex flex-col shrink-0 transition-all duration-200 overflow-hidden"
-    :class="state.sidebarOpen ? 'w-56' : 'w-0 md:w-14'">
+    class="bg-surface border-r border-border flex flex-col shrink-0 transition-all duration-200 sticky top-0 h-screen"
+    :class="state.sidebarOpen ? 'w-56 overflow-y-auto' : 'w-0 md:w-14 md:overflow-y-auto overflow-hidden'">
     <nav class="flex-1 py-3 space-y-0.5 px-2 overflow-y-auto">
       <button v-for="sec in sections" :key="sec.id"
         class="w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-colors duration-150 cursor-pointer"

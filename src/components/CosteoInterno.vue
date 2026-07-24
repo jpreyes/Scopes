@@ -49,10 +49,10 @@ let newGroupName = ''
 </script>
 
 <template>
-  <div class="flex flex-col md:flex-row gap-6 md:h-[calc(100vh-13rem)]">
+  <div class="flex flex-col md:flex-row gap-6">
 
     <!-- LEFT: categories with draggable items -->
-    <div class="flex-1 min-w-0 md:overflow-y-auto md:pr-2">
+    <div class="flex-1 min-w-0 md:pr-2">
       <div class="flex justify-between items-center flex-wrap gap-3 pb-3 mb-4 border-b border-border">
         <h2 class="text-base font-bold text-text">
           COSTEO INTERNO <span class="ml-2 text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded font-bold align-middle">CONFIDENCIAL</span>
@@ -140,7 +140,7 @@ let newGroupName = ''
     </div>
 
     <!-- RIGHT: groups panel -->
-    <div class="md:w-[340px] w-full shrink-0 space-y-3 md:overflow-y-auto md:max-h-full md:border-l md:border-border md:pl-5 pt-4 md:pt-0 border-t md:border-t-0 border-border">
+    <div class="md:w-[340px] w-full shrink-0 space-y-3 md:border-l md:border-border md:pl-5 pt-4 md:pt-0 border-t md:border-t-0 border-border">
 
         <div class="flex items-center gap-2">
           <input v-model="newGroupName" @keyup.enter="addCosteoGroup(newGroupName); newGroupName = ''"

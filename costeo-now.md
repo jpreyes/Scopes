@@ -1,0 +1,26 @@
+- generic [ref=f10e4]:
+  - banner [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - button "Menú" [ref=f10e7] [cursor=pointer]
+      - img "Logo" [ref=f10e9]
+      - generic [ref=f10e10]:
+        - heading "Scopes" [level=1] [ref=f10e11]
+        - textbox [ref=f10e12]: LEVANTAMIENTO Y ESTUDIO DE LOSA
+        - textbox "Cliente" [ref=f10e13]
+  - generic [ref=f10e14]:
+    - complementary [ref=f10e15]:
+      - navigation [ref=f10e16]:
+        - button "Dashboard" [ref=f10e17] [cursor=pointer]
+        - button "Propuestas" [ref=f10e25] [cursor=pointer]
+        - button "Clientes" [ref=f10e31] [cursor=pointer]
+        - button "Catálogo" [ref=f10e39] [cursor=pointer]
+        - button "Historial" [ref=f10e45] [cursor=pointer]
+        - button "Configuración" [ref=f10e51] [cursor=pointer]
+    - generic [ref=f10e57]:
+      - generic [ref=f10e58]:
+        - button "Documento" [ref=f10e59] [cursor=pointer]
+        - button "Carta Gantt" [ref=f10e64] [cursor=pointer]
+        - button "Costeo Interno" [ref=f10e68] [cursor=pointer]
+      - generic [ref=f10e622]:
+        - generic [ref=f10e623]
+        - generic [ref=f10e988]

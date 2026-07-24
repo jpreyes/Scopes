@@ -1,0 +1,61 @@
+- generic [ref=f10e4]:
+  - banner [ref=f10e5]:
+    - generic [ref=f10e6]:
+      - button "Menú" [ref=f10e7] [cursor=pointer]
+      - img "Logo" [ref=f10e9]
+      - generic [ref=f10e10]:
+        - heading "Scopes" [level=1] [ref=f10e11]
+        - textbox [ref=f10e12]: LEVANTAMIENTO Y ESTUDIO DE LOSA
+        - textbox "Cliente" [ref=f10e13]
+  - generic [ref=f10e14]:
+    - complementary [ref=f10e15]:
+      - navigation [ref=f10e16]:
+        - button "Dashboard" [ref=f10e17] [cursor=pointer]
+        - button "Propuestas" [ref=f10e25] [cursor=pointer]
+        - button "Clientes" [ref=f10e31] [cursor=pointer]
+        - button "Catálogo" [ref=f10e39] [cursor=pointer]
+        - button "Historial" [ref=f10e45] [cursor=pointer]
+        - button "Configuración" [ref=f10e51] [cursor=pointer]
+    - generic [ref=f10e57]:
+      - generic [ref=f10e58]:
+        - button "Documento" [ref=f10e59] [cursor=pointer]
+        - button "Carta Gantt" [ref=f10e64] [cursor=pointer]
+        - button "Costeo Interno" [ref=f10e68] [cursor=pointer]
+      - generic [ref=f10e622]:
+        - generic [ref=f10e623]:
+          - generic [ref=f10e624]:
+            - heading "COSTEO INTERNO CONFIDENCIAL" [level=2] [ref=f10e625]
+            - generic [ref=f10e626]
+          - generic [ref=f10e631]:
+            - generic [ref=f10e632]: Margen
+            - combobox [ref=f10e633]
+            - generic [ref=f10e634]
+            - generic [ref=f10e637]: P.Venta = Costo × (1 + margen%)
+          - generic [ref=f10e638]:
+            - generic [ref=f10e639]
+            - generic [ref=f10e714]
+            - generic [ref=f10e805]
+            - generic [ref=f10e896]
+          - button "+ Agregar categoría" [ref=f10e987] [cursor=pointer]
+        - generic [ref=f10e988]:
+          - generic [ref=f10e989]:
+            - textbox "Nuevo grupo…" [ref=f10e990]
+            - button "+" [ref=f10e991] [cursor=pointer]
+          - generic [ref=f10e992]:
+            - generic [ref=f10e993]
+            - generic [ref=f10e998]: Arrastra items aquí
+          - generic [ref=f10e1000]:
+            - generic [ref=f10e1001]
+            - generic [ref=f10e1006]
+          - generic [ref=f10e1008]:
+            - generic [ref=f10e1009]
+            - generic [ref=f10e1014]
+          - generic [ref=f10e1031]:
+            - generic [ref=f10e1032]
+            - generic [ref=f10e1035]
+            - generic [ref=f10e1038]
+            - generic [ref=f10e1041]
+          - button "→ Sincronizar a Propuesta 9" [ref=f10e1067] [cursor=pointer]:
+            - text: → Sincronizar a Propuesta
+            - generic [ref=f10e1045]: "9"
+          - button "Exportar a Excel" [ref=f10e1046] [cursor=pointer]

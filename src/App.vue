@@ -32,25 +32,24 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app p-4 md:p-6">
-    <div class="max-w-6xl mx-auto bg-surface rounded-2xl shadow-xl border border-border">
+  <div class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app">
 
-      <!-- HEADER -->
-      <header class="bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between border-b border-white/5">
-        <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-          <button @click="state.sidebarOpen = !state.sidebarOpen" class="shrink-0 text-white/60 hover:text-white transition cursor-pointer p-1 -ml-1" title="Menú">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-          <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
-          <div class="leading-tight min-w-0 flex-1">
-            <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">Scopes</h1>
-            <input type="text" v-model="state.subheader"
-              class="text-xs sm:text-sm text-white/80 placeholder-white/40 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
-            <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
-              class="text-[10px] sm:text-xs text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
-          </div>
+    <!-- HEADER -->
+    <header class="sticky top-0 z-20 bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between">
+      <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+        <button @click="state.sidebarOpen = !state.sidebarOpen" class="shrink-0 text-white/60 hover:text-white transition cursor-pointer p-1 -ml-1" title="Menú">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
+        <div class="leading-tight min-w-0 flex-1">
+          <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">Scopes</h1>
+          <input type="text" v-model="state.subheader"
+            class="text-xs sm:text-sm text-white/80 placeholder-white/40 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
+          <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
+            class="text-[10px] sm:text-xs text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
         </div>
-      </header>
+      </div>
+    </header>
 
       <!-- SIDEBAR + CONTENT -->
       <div class="flex">
@@ -105,12 +104,10 @@ onMounted(() => {
               <p class="text-sm mt-1">Ajustes de la aplicación — próximamente</p>
             </div>
           </div>
-        </div>
       </div>
 
     </div>
   </div>
-
   <!-- PRINT LAYOUT: Cover + Propuesta -->
   <div class="print-layout">
     <div class="print-cover">

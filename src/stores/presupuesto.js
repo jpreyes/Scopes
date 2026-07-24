@@ -3,6 +3,13 @@ import * as XLSX from 'xlsx'
 
 let _key = 0
 const uid = () => ++_key
+let toastTimer = null
+
+function toast(msg) {
+  state.toast = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { state.toast = '' }, 2500)
+}
 
 function fmtAmount(amount, currency) {
   let sym = '$ ', dec = 0
@@ -125,6 +132,7 @@ const state = reactive({
 
   loadVersion: 0,
   budgetList: [],
+  toast: '',
 })
 
 const proposalSubtotal = computed(() => state.proposalItems.reduce((s, i) => s + (i.qty || 0) * (i.price || 0), 0))
@@ -302,6 +310,7 @@ function saveBudget() {
   localStorage.setItem(key, JSON.stringify(data))
   generateQuoteNumber()
   loadHistorial()
+  toast('Guardado ✓')
 }
 
 function loadBudgetByNum(qn) {
@@ -499,6 +508,6 @@ export function usePresupuesto() {
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
     saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial,
-    exportCosteoExcel, exportHistorialExcel,
+    exportCosteoExcel, exportHistorialExcel, toast,
   }
 }

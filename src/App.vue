@@ -160,6 +160,12 @@ function handlePrint() {
       </div>
     </div>
   </div>
+
+  <!-- Toast notification -->
+  <div v-if="state.toast"
+    class="fixed bottom-6 right-6 z-50 bg-text text-surface px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold animate-fade-in">
+    {{ state.toast }}
+  </div>
 </template>
 
 <style>
@@ -285,5 +291,13 @@ function handlePrint() {
   .print-content .print-signatures p { margin: 2px 0; font-size: 9pt; }
 
   a { color: var(--color-primary); text-decoration: none; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
 }
 </style>

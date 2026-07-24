@@ -1,12 +1,18 @@
 <script setup>
 import { usePresupuesto } from '../stores/presupuesto.js'
-const { state, loadBudgetByNum } = usePresupuesto()
+const { state, loadBudgetByNum, seedSampleData } = usePresupuesto()
 const d = state.dashboardData
 </script>
 
 <template>
   <div class="p-3 sm:p-6 space-y-6">
-    <h1 class="text-lg font-bold text-text">Dashboard</h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-lg font-bold text-text">Dashboard</h1>
+      <button v-if="!d.total" @click="seedSampleData"
+        class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">
+        Cargar datos de ejemplo
+      </button>
+    </div>
 
     <!-- Stats cards -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

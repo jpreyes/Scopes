@@ -451,6 +451,199 @@ function loadDashboardData() {
   }
 }
 
+function seedSampleData() {
+  const samples = [
+    {
+      quoteNumber: 'CT-PS-001-2026', quoteDate: '2026-07-15', clientName: 'Constructora Los Andes',
+      subheader: 'INSPECCIÓN DE LOSA EDIFICIO CORPORATIVO', proposalStatus: 'adjudicada', awardAmount: 12500000,
+      contactPerson: 'Carlos Muñoz', companyResp: 'Juan Pérez', companyRespSig: 'Juan Pérez',
+      clientResp: 'Carlos Muñoz', clientRespSig: 'Carlos Muñoz',
+      proposalItems: [
+        { desc: 'Personal Técnico', qty: 1, price: 6500000 },
+        { desc: 'Equipos Especializados', qty: 1, price: 3800000 },
+        { desc: 'Traslados y Viáticos', qty: 1, price: 2200000 },
+      ],
+      propuestaSections: [
+        { label: 'PRESENTACIÓN', content: '<p>Presentamos nuestra propuesta técnica para la inspección de losa del edificio corporativo de Constructora Los Andes, comprometiéndonos a entregar un servicio de excelencia.</p>' },
+        { label: 'ALCANCE', content: '<p>El servicio incluye inspección visual, ensayos no destructivos, extracción de testigos y análisis estructural de la losa del edificio corporativo.</p>' },
+        { label: 'ENTREGABLES', content: '<ul><li>Informe técnico detallado</li><li>Planos con resultados</li><li>Recomendaciones estructurales</li></ul>' },
+      ],
+      ganttTasks: [
+        { name: 'Inspección en terreno', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 3 },
+        { name: 'Ensayos de laboratorio', phase: 'CAPTURA DE DATOS', startDay: 2, endDay: 5 },
+        { name: 'Análisis estructural', phase: 'ANÁLISIS DE DATOS', startDay: 5, endDay: 8 },
+        { name: 'Entrega de informes', phase: 'ANÁLISIS DE DATOS', startDay: 8, endDay: 10 },
+      ],
+    },
+    {
+      quoteNumber: 'CT-PS-002-2026', quoteDate: '2026-07-20', clientName: 'Mina El Teniente',
+      subheader: 'ESTUDIO DE SUELOS SECTOR NORTE', proposalStatus: 'revision',
+      contactPerson: 'Roberto Ávila', companyResp: 'María Soto', companyRespSig: 'María Soto',
+      clientResp: 'Roberto Ávila', clientRespSig: '',
+      proposalItems: [
+        { desc: 'Estudio de Suelos', qty: 1, price: 5200000 },
+        { desc: 'Análisis Químico', qty: 1, price: 1900000 },
+        { desc: 'Informe Geotécnico', qty: 1, price: 1100000 },
+      ],
+      propuestaSections: [
+        { label: 'PRESENTACIÓN', content: '<p>Proponemos la realización de un estudio de suelos completo en el sector norte de la mina.</p>' },
+        { label: 'METODOLOGÍA', content: '<p>Se realizarán calicatas, ensayos SPT, y análisis de laboratorio según norma NCh.</p>' },
+      ],
+      ganttTasks: [
+        { name: 'Trabajo en terreno', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 5 },
+        { name: 'Ensayos de laboratorio', phase: 'CAPTURA DE DATOS', startDay: 4, endDay: 8 },
+        { name: 'Informe final', phase: 'ANÁLISIS DE DATOS', startDay: 8, endDay: 12 },
+      ],
+    },
+    {
+      quoteNumber: 'CT-PS-003-2026', quoteDate: '2026-07-10', clientName: 'Edifica SpA',
+      subheader: 'INSPECCIÓN TÉCNICA DE OBRA', proposalStatus: 'aprobada', awardAmount: 5800000,
+      contactPerson: 'Pablo Rojas', companyResp: 'Juan Pérez',
+      proposalItems: [
+        { desc: 'Inspección Técnica', qty: 1, price: 3500000 },
+        { desc: 'Informe Semanal', qty: 4, price: 575000 },
+      ],
+      propuestaSections: [
+        { label: 'PRESENTACIÓN', content: '<p>Servicio de inspección técnica de obra para el proyecto Nueva Sede Edifica SpA.</p>' },
+        { label: 'SERVICIO', content: '<p>Incluye revisión de avance, control de calidad, y elaboración de informes semanales.</p>' },
+      ],
+      ganttTasks: [
+        { name: 'Inspección inicial', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 2 },
+        { name: 'Seguimiento semanal', phase: 'CAPTURA DE DATOS', startDay: 3, endDay: 14 },
+        { name: 'Informe final', phase: 'ANÁLISIS DE DATOS', startDay: 14, endDay: 15 },
+      ],
+    },
+    {
+      quoteNumber: 'CT-PS-004-2026', quoteDate: '2026-07-22', clientName: 'Puentes del Sur',
+      subheader: 'LEVANTAMIENTO TOPOGRÁFICO PUENTE MAULE', proposalStatus: 'borrador',
+      contactPerson: 'Andrés Salinas',
+      proposalItems: [
+        { desc: 'Topografía', qty: 1, price: 1800000 },
+        { desc: 'Modelación Digital', qty: 1, price: 1100000 },
+      ],
+      propuestaSections: [
+        { label: 'PRESENTACIÓN', content: '<p>Propuesta para levantamiento topográfico del Puente Maule.</p>' },
+        { label: 'EQUIPO', content: '<p>Contaremos con estación total, GPS diferencial, y drone para fotogrametría.</p>' },
+      ],
+      ganttTasks: [
+        { name: 'Trabajo en terreno', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 3 },
+        { name: 'Procesamiento', phase: 'ANÁLISIS DE DATOS', startDay: 4, endDay: 6 },
+      ],
+    },
+    {
+      quoteNumber: 'CT-PS-005-2026', quoteDate: '2026-07-18', clientName: 'Hormigones Nacionales',
+      subheader: 'ENSAYOS DE CALIDAD DE HORMIGÓN', proposalStatus: 'enviada',
+      contactPerson: 'Luis Vega', companyResp: 'María Soto',
+      proposalItems: [
+        { desc: 'Scanner de Armadura', qty: 3, price: 450000 },
+        { desc: 'Ultrasonido', qty: 5, price: 380000 },
+        { desc: 'Esclerometría', qty: 10, price: 180000 },
+      ],
+      propuestaSections: [
+        { label: 'PRESENTACIÓN', content: '<p>Programa de ensayos de calidad de hormigón para la planta de Hormigones Nacionales.</p>' },
+        { label: 'ENSAYOS', content: '<p>Se realizarán ensayos de esclerometría, ultrasonido, y scanner de armadura según normativa vigente.</p>' },
+        { label: 'PLAZOS', content: '<p>Los resultados preliminares se entregarán en 5 días hábiles.</p>' },
+      ],
+      ganttTasks: [
+        { name: 'Toma de muestras', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 3 },
+        { name: 'Ensayos en laboratorio', phase: 'CAPTURA DE DATOS', startDay: 3, endDay: 7 },
+        { name: 'Elaboración de informes', phase: 'ANÁLISIS DE DATOS', startDay: 7, endDay: 10 },
+      ],
+    },
+    {
+      quoteNumber: 'CT-PS-006-2026', quoteDate: '2026-07-05', clientName: 'Arquidiseño Ltda',
+      subheader: 'CONSULTORÍA ESTRUCTURAL PROYECTO HABITACIONAL', proposalStatus: 'rechazada',
+      contactPerson: 'Camila Flores',
+      proposalItems: [
+        { desc: 'Consultoría Estructural', qty: 1, price: 1500000 },
+        { desc: 'Revisión de Planos', qty: 1, price: 600000 },
+      ],
+      propuestaSections: [
+        { label: 'PRESENTACIÓN', content: '<p>Servicios de consultoría estructural para proyecto habitacional.</p>' },
+        { label: 'SERVICIOS', content: '<p>Incluye revisión de planos, cálculo estructural, y memoria de cálculo.</p>' },
+      ],
+      ganttTasks: [
+        { name: 'Revisión de antecedentes', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 2 },
+        { name: 'Modelación estructural', phase: 'ANÁLISIS DE DATOS', startDay: 3, endDay: 5 },
+      ],
+    },
+  ]
+
+  // Backup current counter and set to 6
+  const savedCounter = JSON.parse(localStorage.getItem('presto_counter') || '0')
+  localStorage.setItem('presto_counter', '6')
+  const now = Date.now()
+
+  samples.forEach((s, si) => {
+    // Build sections with ids
+    const sections = s.propuestaSections.map(sec => ({
+      id: uid(), label: sec.label, content: sec.content,
+    }))
+
+    // Build costeo categories
+    const costeo = [
+      { id: 'personal', label: '1. PERSONAL', items: [
+        { desc: 'Ingeniero Senior', qty: 1, days: si % 3 + 2, cost: 250000, _key: uid(), sale: 300000 },
+        { desc: 'Ingeniero Junior', qty: 1, days: si % 3 + 1, cost: 150000, _key: uid(), sale: 180000 },
+        { desc: 'Técnico', qty: 2, days: si % 3 + 1, cost: 80000, _key: uid(), sale: 96000 },
+      ]},
+      { id: 'equipos', label: '2. EQUIPOS', items: [
+        { desc: 'Scanner PM8000', qty: 1, days: si % 2 + 1, cost: 60000, _key: uid(), sale: 72000 },
+        { desc: 'Ultrasonido', qty: 1, days: si % 2 + 1, cost: 55000, _key: uid(), sale: 66000 },
+      ]},
+    ]
+
+    // Build gantt tasks with ids and uid phase
+    const ganttTasks = s.ganttTasks.map(t => ({
+      id: uid(), name: t.name, phase: t.phase, startDay: t.startDay, endDay: t.endDay, dependsOn: null,
+    }))
+
+    const data = {
+      quoteNumber: s.quoteNumber, quoteRev: '01', quoteDate: s.quoteDate,
+      validUntil: '', currency: '$', contactPerson: s.contactPerson || '',
+      company: 'Predikta Solutions SpA', companyAddr: 'Santiago, Chile',
+      companyPhone: '+56 9 1234 5678', companyEmail: 'contacto@predikta.cl',
+      companyResp: s.companyResp || '', companyRespSig: s.companyRespSig || '',
+      client: s.clientName, clientAddr: '', clientPhone: '', clientEmail: '',
+      clientResp: s.clientResp || '', clientRespSig: s.clientRespSig || '',
+      headerClient: s.clientName, subheader: s.subheader,
+      propuestaSections: sections,
+      proposalItems: JSON.parse(JSON.stringify(s.proposalItems)),
+      taxRate: 19,
+      costeoMarkup: 20, costeoMarginMode: 'venta',
+      costeo: costeo,
+      costeoGroups: [
+        { id: uid(), name: 'Personal', itemKeys: costeo[0].items.map(i => i._key) },
+        { id: uid(), name: s.clientName.length > 15 ? s.clientName.substring(0, 15) : s.clientName, itemKeys: costeo[1].items.map(i => i._key) },
+      ],
+      printSections: { economia: true, gantt: true },
+      ganttPhases: ['CAPTURA DE DATOS', 'ANÁLISIS DE DATOS'],
+      ganttUnit: 'day', ganttSpan: Math.max(14, ...ganttTasks.map(t => t.endDay)),
+      ganttTasks,
+      proposalStatus: s.proposalStatus,
+      awardAmount: s.awardAmount || null,
+      projectNotes: '',
+    }
+    sections.forEach(sec => { data.printSections[sec.id] = true })
+
+    const key = 'presto_' + s.quoteNumber.replace(/\//g, '_')
+    localStorage.setItem(key, JSON.stringify(data))
+  })
+
+  // Create presto_list
+  const list = samples.map(s => ({
+    quoteNumber: s.quoteNumber, client: s.clientName, date: s.quoteDate,
+    savedAt: new Date(now + samples.indexOf(s) * 1000).toISOString(),
+  }))
+  localStorage.setItem('presto_list', JSON.stringify(list))
+
+  // Restore counter (set to last number so new quotes continue from 7)
+  localStorage.setItem('presto_counter', JSON.stringify(Math.max(6, savedCounter)))
+
+  loadHistorial()
+  loadDashboardData()
+  toast('Datos de ejemplo cargados ✓')
+}
 function addPropuestaSection() {
   const n = state.propuestaSections.length + 1
   state.propuestaSections.push({ id: uid(), label: `SECCIÓN ${String(n).padStart(2, '0')}`, content: '' })
@@ -562,7 +755,7 @@ export function usePresupuesto() {
     syncSelectedToProposal,
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
-    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData,
+    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData,
     exportCosteoExcel, exportHistorialExcel, toast,
   }
 }

@@ -1,5 +1,6 @@
 import { reactive, computed, toRefs } from 'vue'
 import * as XLSX from 'xlsx'
+import * as pb from './pocketbase.js'
 
 let _key = 0
 const uid = () => ++_key
@@ -55,6 +56,7 @@ function makeDefaultCosteo() {
 }
 
 const state = reactive({
+  dbConnected: false,
   activeSection: 'propuestas',
   sidebarOpen: true,
   activeTab: 'propuesta',
@@ -141,6 +143,15 @@ const state = reactive({
   catalog: [],
   toast: '',
 })
+
+async function dbLogin() {
+  const saved = sessionStorage.getItem('pb_token')
+  if (saved) { state.dbConnected = pb.restoreToken(); return }
+  try {
+    await pb.login('admin@scopes.cl', 'admin123')
+    state.dbConnected = true
+  } catch { state.dbConnected = false }
+}
 
 const proposalSubtotal = computed(() => state.proposalItems.reduce((s, i) => s + (i.qty || 0) * (i.price || 0), 0))
 const proposalTax = computed(() => proposalSubtotal.value * (state.taxRate / 100))
@@ -316,6 +327,7 @@ function saveBudget() {
     localStorage.setItem('presto_list', JSON.stringify(list))
   }
   localStorage.setItem(key, JSON.stringify(data))
+  if (state.dbConnected) pb.saveQuote(data).catch(() => {})
   generateQuoteNumber()
   loadHistorial()
   loadDashboardData()
@@ -396,11 +408,30 @@ function deleteBudget(qn) {
   let list = JSON.parse(localStorage.getItem('presto_list') || '[]')
   list = list.filter(x => x.quoteNumber !== qn)
   localStorage.setItem('presto_list', JSON.stringify(list))
+  if (state.dbConnected) pb.deleteQuoteByNum(qn).catch(() => {})
   loadHistorial()
   loadDashboardData()
 }
 
 function loadHistorial() {
+  if (state.dbConnected) {
+    pb.getQuotes().then(quotes => {
+      const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
+      state.budgetList = quotes.map(q => {
+        const status = q.proposalStatus || 'borrador'
+        const total = (q.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+        return {
+          quoteNumber: q.quoteNumber, client: q.clientName || q.client || '-', date: q.quoteDate || '-',
+          total: fmtAmount(total, q.currency || '$'),
+          status, statusLabel: STATUS_LABELS[status] || 'Borrador',
+          statusColor: STATUS_COLORS[status] || 'bg-gray-400',
+          awardAmount: q.awardAmount || null,
+        }
+      })
+    }).catch(() => loadHistorialFallback())
+  } else { loadHistorialFallback() }
+}
+function loadHistorialFallback() {
   const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
   const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
   const STATUS_COLORS = { borrador: 'bg-gray-400', enviada: 'bg-blue-500', revision: 'bg-amber-500', aprobada: 'bg-emerald-500', rechazada: 'bg-red-500', adjudicada: 'bg-primary' }
@@ -419,9 +450,34 @@ function loadHistorial() {
   })
 }
 
+const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
+const STATUS_COLORS = { borrador: 'bg-gray-400', enviada: 'bg-blue-500', revision: 'bg-amber-500', aprobada: 'bg-emerald-500', rechazada: 'bg-red-500', adjudicada: 'bg-primary' }
+
 function loadDashboardData() {
+  if (state.dbConnected) {
+    pb.getQuotes().then(quotes => processDashboard(quotes)).catch(() => loadDashboardFallback())
+  } else { loadDashboardFallback() }
+}
+function processDashboard(quotes) {
+  const counts = { borrador: 0, enviada: 0, revision: 0, aprobada: 0, rechazada: 0, adjudicada: 0 }
+  let totalAwardAmount = 0
+  const recent = []
+  quotes.forEach(q => {
+    const status = q.proposalStatus || 'borrador'
+    counts[status] = (counts[status] || 0) + 1
+    if (q.awardAmount) totalAwardAmount += Number(q.awardAmount)
+    const total = (q.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+    recent.push({
+      quoteNumber: q.quoteNumber, client: q.clientName || '-', date: q.quoteDate || '-',
+      status, statusLabel: STATUS_LABELS[status] || 'Borrador',
+      total: fmtAmount(total, q.currency || '$'),
+    })
+  })
+  recent.sort((a, b) => new Date(b.date) - new Date(a.date))
+  state.dashboardData = { total: quotes.length, counts, totalAwardAmount: fmtAmount(totalAwardAmount, '$'), recent: recent.slice(0, 6) }
+}
+function loadDashboardFallback() {
   const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
-  const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
   const counts = { borrador: 0, enviada: 0, revision: 0, aprobada: 0, rechazada: 0, adjudicada: 0 }
   let totalAwardAmount = 0
   const recent = []
@@ -677,9 +733,20 @@ function seedSampleData() {
   toast('Datos de ejemplo cargados ✓')
 }
 function loadClients() {
-  state.clients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+  if (state.dbConnected) {
+    pb.getClients().then(items => { state.clients = items }).catch(() => {
+      state.clients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+    })
+  } else {
+    state.clients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+  }
 }
 function saveClient(client) {
+  if (state.dbConnected) {
+    pb.saveClient(client).catch(() => fallbackSaveClient(client))
+  } else { fallbackSaveClient(client) }
+}
+function fallbackSaveClient(client) {
   const list = JSON.parse(localStorage.getItem('presto_clients') || '[]')
   const idx = list.findIndex(c => c.id === client.id)
   if (idx >= 0) { list[idx] = client } else { list.push(client) }
@@ -688,15 +755,31 @@ function saveClient(client) {
   toast('Cliente guardado ✓')
 }
 function deleteClient(id) {
+  if (state.dbConnected) {
+    pb.deleteClient(id).catch(() => fallbackDeleteClient(id))
+  } else { fallbackDeleteClient(id) }
+}
+function fallbackDeleteClient(id) {
   const list = JSON.parse(localStorage.getItem('presto_clients') || '[]')
   localStorage.setItem('presto_clients', JSON.stringify(list.filter(c => c.id !== id)))
   loadClients()
   toast('Cliente eliminado ✓')
 }
 function loadCatalog() {
-  state.catalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+  if (state.dbConnected) {
+    pb.getCatalog().then(items => { state.catalog = items }).catch(() => {
+      state.catalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+    })
+  } else {
+    state.catalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+  }
 }
 function saveCatalogItem(item) {
+  if (state.dbConnected) {
+    pb.saveCatalogItem(item).catch(() => fallbackSaveCatalogItem(item))
+  } else { fallbackSaveCatalogItem(item) }
+}
+function fallbackSaveCatalogItem(item) {
   const list = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
   const idx = list.findIndex(c => c.id === item.id)
   if (idx >= 0) { list[idx] = item } else { list.push(item) }
@@ -705,6 +788,11 @@ function saveCatalogItem(item) {
   toast('Producto guardado ✓')
 }
 function deleteCatalogItem(id) {
+  if (state.dbConnected) {
+    pb.deleteCatalogItem(id).catch(() => fallbackDeleteCatalogItem(id))
+  } else { fallbackDeleteCatalogItem(id) }
+}
+function fallbackDeleteCatalogItem(id) {
   const list = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
   localStorage.setItem('presto_catalog', JSON.stringify(list.filter(c => c.id !== id)))
   loadCatalog()
@@ -822,6 +910,6 @@ export function usePresupuesto() {
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
     saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient, loadCatalog, saveCatalogItem, deleteCatalogItem,
-    exportCosteoExcel, exportHistorialExcel, toast,
+    exportCosteoExcel, exportHistorialExcel, toast, dbLogin,
   }
 }

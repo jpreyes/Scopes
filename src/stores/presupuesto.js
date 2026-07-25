@@ -138,6 +138,7 @@ const state = reactive({
   budgetList: [],
   dashboardData: { total: 0, counts: {}, totalAwardAmount: '$ 0', recent: [] },
   clients: [],
+  catalog: [],
   toast: '',
 })
 
@@ -464,6 +465,23 @@ function seedSampleData() {
   ]
   localStorage.setItem('presto_clients', JSON.stringify(sampleClients))
 
+  // Seed catalog
+  const sampleCatalog = [
+    { id: 'cat1', name: 'Ingeniero Senior', price: 350000, unit: 'día', category: 'Personal' },
+    { id: 'cat2', name: 'Ingeniero Junior', price: 200000, unit: 'día', category: 'Personal' },
+    { id: 'cat3', name: 'Técnico Especializado', price: 120000, unit: 'día', category: 'Personal' },
+    { id: 'cat4', name: 'Scanner de Armadura PM8000', price: 80000, unit: 'día', category: 'Equipos' },
+    { id: 'cat5', name: 'Ultrasonido Pundit 200', price: 75000, unit: 'día', category: 'Equipos' },
+    { id: 'cat6', name: 'Esclerómetro ZC3-A', price: 45000, unit: 'día', category: 'Equipos' },
+    { id: 'cat7', name: 'Ensayo de Carbonatación', price: 35000, unit: 'und', category: 'Ensayos' },
+    { id: 'cat8', name: 'Extracción de Testigos', price: 90000, unit: 'und', category: 'Ensayos' },
+    { id: 'cat9', name: 'Informe Técnico', price: 500000, unit: 'global', category: 'Informes' },
+    { id: 'cat10', name: 'Modelación BIM', price: 650000, unit: 'global', category: 'Informes' },
+    { id: 'cat11', name: 'Pasaje Aéreo Nacional', price: 120000, unit: 'und', category: 'Viáticos' },
+    { id: 'cat12', name: 'Hotel', price: 75000, unit: 'noche', category: 'Viáticos' },
+  ]
+  localStorage.setItem('presto_catalog', JSON.stringify(sampleCatalog))
+
   const samples = [
     {
       quoteNumber: 'CT-PS-001-2026', quoteDate: '2026-07-15', clientName: 'Constructora Los Andes',
@@ -653,6 +671,8 @@ function seedSampleData() {
   localStorage.setItem('presto_counter', JSON.stringify(Math.max(6, savedCounter)))
 
   loadHistorial()
+  loadClients()
+  loadCatalog()
   loadDashboardData()
   toast('Datos de ejemplo cargados ✓')
 }
@@ -672,6 +692,23 @@ function deleteClient(id) {
   localStorage.setItem('presto_clients', JSON.stringify(list.filter(c => c.id !== id)))
   loadClients()
   toast('Cliente eliminado ✓')
+}
+function loadCatalog() {
+  state.catalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+}
+function saveCatalogItem(item) {
+  const list = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+  const idx = list.findIndex(c => c.id === item.id)
+  if (idx >= 0) { list[idx] = item } else { list.push(item) }
+  localStorage.setItem('presto_catalog', JSON.stringify(list))
+  loadCatalog()
+  toast('Producto guardado ✓')
+}
+function deleteCatalogItem(id) {
+  const list = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+  localStorage.setItem('presto_catalog', JSON.stringify(list.filter(c => c.id !== id)))
+  loadCatalog()
+  toast('Producto eliminado ✓')
 }
 function addPropuestaSection() {
   const n = state.propuestaSections.length + 1
@@ -784,7 +821,7 @@ export function usePresupuesto() {
     syncSelectedToProposal,
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
-    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient,
+    saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient, loadCatalog, saveCatalogItem, deleteCatalogItem,
     exportCosteoExcel, exportHistorialExcel, toast,
   }
 }

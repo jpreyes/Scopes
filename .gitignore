@@ -27,7 +27,10 @@ dist-ssr
 .playwright-mcp/
 .playwright/
 
-# Root screenshots (from testing)
+# PocketBase
+pocketbase/pocketbase.exe
+pocketbase/pb_data/
+*.db
 /image1.png
 /image2.png
 /image3.png

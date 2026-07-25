@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db": "cd pocketbase && pocketbase.exe serve --http=0.0.0.0:8090",
+    "db:setup": "cd pocketbase && pocketbase.exe superuser create admin@scopes.cl admin123"
   },
   "dependencies": {
     "@tiptap/extension-image": "^3.27.1",

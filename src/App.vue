@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, nextTick } from 'vue'
 import { usePresupuesto } from './stores/presupuesto.js'
+import * as pb from './stores/pocketbase.js'
 import CoverPage from './components/CoverPage.vue'
 import Sidebar from './components/Sidebar.vue'
 import PropuestaTab from './components/PropuestaTab.vue'
@@ -11,6 +12,8 @@ import Dashboard from './components/Dashboard.vue'
 import Clientes from './components/Clientes.vue'
 import Catalogo from './components/Catalogo.vue'
 import PrintGantt from './components/PrintGantt.vue'
+import ConfigTab from './components/ConfigTab.vue'
+import LoginPage from './components/LoginPage.vue'
 
 const icons = {
   propuesta: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
@@ -19,9 +22,21 @@ const icons = {
   historial: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
 }
 
-const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog } = usePresupuesto()
+const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog, resetBudget, generateQuoteNumber } = usePresupuesto()
+
+function onAuth(user) {
+  state.user = user
+}
+
+function handleLogout() {
+  pb.logoutUser()
+  state.user = null
+}
 
 onMounted(() => {
+  if (pb.restoreUserToken()) {
+    state.user = pb.getLoggedUser()
+  }
   const today = new Date()
   state.quoteDate = today.toISOString().slice(0, 10)
   const f = new Date(); f.setDate(f.getDate() + 30)
@@ -39,7 +54,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-auto">
+  <LoginPage v-if="!state.user" @auth="onAuth" />
+
+  <div v-else class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-auto">
 
     <!-- HEADER -->
     <header class="sticky top-0 z-20 bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between">
@@ -49,11 +66,26 @@ onMounted(() => {
         </button>
         <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
         <div class="leading-tight min-w-0 flex-1">
-          <h1 class="text-sm sm:text-lg font-bold tracking-wide truncate">Scopes</h1>
-          <input type="text" v-model="state.subheader"
-            class="text-xs sm:text-sm text-white/80 placeholder-white/40 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
+          <div class="flex items-baseline gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-white/90">Scopes</h1>
+            <input type="text" v-model="state.subheader"
+              class="text-xs sm:text-sm text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/20 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
+          </div>
           <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
-            class="text-[10px] sm:text-xs text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/30 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
+            class="text-[10px] sm:text-xs text-white/40 placeholder-white/20 bg-transparent border-b border-transparent hover:border-white/20 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button @click="state.activeSection = 'propuestas'; resetBudget()"
+          class="px-3 py-1.5 text-xs font-semibold bg-primary hover:bg-primary-hover text-white rounded-lg transition cursor-pointer shrink-0 flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva
+        </button>
+        <div class="flex items-center gap-2 pl-2 border-l border-white/20">
+          <span class="text-xs text-white/70 hidden sm:inline">{{ state.user?.name || state.user?.email }}</span>
+          <button @click="handleLogout" class="text-[10px] text-white/50 hover:text-white transition cursor-pointer" title="Cerrar sesión">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </div>
     </header>
@@ -97,10 +129,7 @@ onMounted(() => {
             <HistorialTab v-else-if="state.activeSection === 'historial'" />
 
             <!-- Configuración -->
-            <div v-else-if="state.activeSection === 'config'" class="text-center py-16 text-text-muted">
-              <p class="text-lg font-semibold">Configuración</p>
-              <p class="text-sm mt-1">Ajustes de la aplicación — próximamente</p>
-            </div>
+            <ConfigTab v-else-if="state.activeSection === 'config'" />
           </div>
       </div>
 
@@ -163,6 +192,7 @@ onMounted(() => {
               <td>{{ i+1 }}.1</td>
               <td>{{ it.desc }}</td>
               <td>{{ it.qty }}</td>
+              <td>{{ fmt(it.price||0) }}</td>
               <td>{{ fmt((it.qty||0)*(it.price||0)) }}</td>
             </tr>
           </tbody>

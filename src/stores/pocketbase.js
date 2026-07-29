@@ -1,14 +1,19 @@
-const BASE = 'http://localhost:8090'
+const BASE = import.meta.env.VITE_PB_URL || 'http://localhost:8090'
+export function getBaseUrl() { return BASE }
 
 let token = null
+let userToken = null
 
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = 'Bearer ' + token
+  const t = userToken || token
+  if (t) headers['Authorization'] = 'Bearer ' + t
   const res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
   if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || res.statusText) }
   return res.json()
 }
+
+// --- Admin superuser auth (backend ops) ---
 
 export async function login(email, password) {
   const data = await api('POST', '/api/collections/_superusers/auth-with-password', { identity: email, password })
@@ -20,6 +25,47 @@ export async function login(email, password) {
 export function restoreToken() {
   token = sessionStorage.getItem('pb_token')
   return !!token
+}
+
+export function clearToken() {
+  token = null
+  sessionStorage.removeItem('pb_token')
+}
+
+// --- Web user auth ---
+
+export async function loginUser(email, password) {
+  const data = await api('POST', '/api/collections/users/auth-with-password', { identity: email, password })
+  userToken = data.token
+  sessionStorage.setItem('pb_user_token', data.token)
+  sessionStorage.setItem('pb_user', JSON.stringify(data.record))
+  return data
+}
+
+export function restoreUserToken() {
+  userToken = sessionStorage.getItem('pb_user_token')
+  return !!userToken
+}
+
+export function getLoggedUser() {
+  const raw = sessionStorage.getItem('pb_user')
+  return raw ? JSON.parse(raw) : null
+}
+
+export function logoutUser() {
+  userToken = null
+  sessionStorage.removeItem('pb_user_token')
+  sessionStorage.removeItem('pb_user')
+}
+
+export async function registerUser(email, password, name) {
+  const res = await fetch(BASE + '/api/collections/users/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, passwordConfirm: password, name }),
+  })
+  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || 'Error al registrar') }
+  return res.json()
 }
 
 // --- Clients ---
@@ -77,6 +123,11 @@ export async function saveQuote(quote) {
 
 export async function deleteQuote(id) {
   await api('DELETE', '/api/collections/quotes/records/' + id)
+}
+
+export async function getQuoteByNum(quoteNumber) {
+  const data = await api('GET', '/api/collections/quotes/records?filter=(quoteNumber%3D%22' + encodeURIComponent(quoteNumber) + '%22)')
+  return data.items.length ? data.items[0] : null
 }
 
 export async function deleteQuoteByNum(quoteNumber) {

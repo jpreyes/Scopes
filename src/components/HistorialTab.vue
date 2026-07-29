@@ -29,7 +29,7 @@ const { state, loadBudgetByNum, deleteBudget, exportHistorialExcel } = usePresup
         </tr>
       </thead>
       <tbody>
-        <tr v-for="b in state.budgetList" :key="b.quoteNumber" class="border-b border-gray-100 hover:bg-gray-50/50 transition">
+        <tr v-for="b in state.budgetList" :key="b.quoteNumber" class="border-b border-border hover:bg-surface/50 transition">
           <td class="py-2.5 px-3 text-sm font-mono">{{ b.quoteNumber }}</td>
           <td class="py-2.5 px-3 text-sm">{{ b.client || '-' }}</td>
           <td class="py-2.5 px-3 text-sm text-text-muted">{{ b.date || '-' }}</td>

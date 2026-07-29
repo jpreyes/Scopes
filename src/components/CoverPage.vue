@@ -5,7 +5,7 @@ const { state } = usePresupuesto()
 
 <template>
   <div class="relative w-full min-h-[500px] rounded-xl overflow-hidden"
-    style="background-image: url(/images/image2.png); background-size: cover; background-position: center;">
+    :style="{ backgroundImage: 'url(/images/' + (state.coverBg || 'image2.png') + ')', backgroundSize: 'cover', backgroundPosition: 'center' }">
     <div class="absolute inset-0 bg-gradient-to-br from-slate-900/85 via-slate-800/65 to-slate-900/85"></div>
     <div class="relative z-10 flex flex-col items-center justify-center h-full min-h-[500px] text-white text-center px-8">
       <div class="mb-6 bg-white/10 backdrop-blur-sm px-8 py-4 rounded-2xl">

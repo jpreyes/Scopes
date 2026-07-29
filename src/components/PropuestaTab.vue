@@ -79,7 +79,7 @@ function ganttBarStyle(t) {
         <span class="text-border mx-1 hidden sm:inline">|</span>
         <div class="flex gap-1.5">
           <button @click="saveBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition cursor-pointer">Guardar</button>
-          <button @click="loadBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-bg-app text-text-muted border border-border hover:bg-gray-50 hover:text-text transition cursor-pointer">Cargar</button>
+          <button @click="loadBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-bg-app text-text-muted border border-border hover:bg-surface hover:text-text transition cursor-pointer">Cargar</button>
           <button @click="handlePrint" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer">Imprimir</button>
         </div>
       </div>
@@ -159,7 +159,7 @@ function ganttBarStyle(t) {
       </div>
       <RichTextEditor :key="'rte-' + s.id + '-' + state.loadVersion" v-model="s.content" />
     </div>
-    <button @click="addPropuestaSection" class="mb-4 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-gray-50 hover:border-primary-border transition cursor-pointer">+ Agregar sección</button>
+    <button @click="addPropuestaSection" class="mb-4 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar sección</button>
 
     <!-- Items table -->
     <section class="mb-5">
@@ -180,7 +180,7 @@ function ganttBarStyle(t) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(it, i) in state.proposalItems" :key="i" class="border-b border-border-light hover:bg-gray-50/50 transition-colors">
+            <tr v-for="(it, i) in state.proposalItems" :key="i" class="border-b border-border-light hover:bg-surface/50 transition-colors">
               <td class="py-2 px-3 text-center text-xs text-text-dim font-mono">{{ i+1 }}.1</td>
               <td class="py-2 px-1"><input type="text" v-model="it.desc" class="w-full px-2 py-1.5 border border-transparent rounded text-sm outline-none focus:border-primary focus:bg-surface transition" placeholder="Descripción" /></td>
               <td class="py-2 px-1"><input type="number" v-model.number="it.qty" min="1" class="w-full px-2 py-1.5 border border-transparent rounded text-sm text-right outline-none focus:border-primary focus:bg-surface transition" /></td>
@@ -191,7 +191,7 @@ function ganttBarStyle(t) {
           </tbody>
         </table>
       </div>
-      <button @click="addProposalItem" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-gray-50 hover:border-primary-border transition cursor-pointer">+ Agregar item</button>
+      <button @click="addProposalItem" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar item</button>
     </section>
 
     <!-- Totals -->
@@ -239,8 +239,8 @@ function ganttBarStyle(t) {
           </thead>
           <tbody>
             <template v-for="(phase, pi) in state.ganttPhases" :key="phase">
-              <tr class="bg-gray-100/80">
-                <td class="py-2 px-3 font-bold text-text text-xs sticky left-0 bg-gray-100/80 z-10">
+              <tr class="bg-surface/80">
+                <td class="py-2 px-3 font-bold text-text text-xs sticky left-0 bg-surface/80 z-10">
                   <div class="flex items-center justify-between gap-2">
                     <input type="text" v-model="state.ganttPhases[pi]"
                       class="bg-transparent border-b border-dashed border-border outline-none focus:border-primary text-xs font-bold flex-1 min-w-0" />
@@ -249,7 +249,7 @@ function ganttBarStyle(t) {
                 </td>
                 <td :colspan="ganttHeaders.totalUnits"></td>
               </tr>
-              <tr v-for="t in state.ganttTasks.filter(x => x.phase === phase)" :key="t.id" class="border-b border-border-light hover:bg-gray-50/50 transition-colors">
+              <tr v-for="t in state.ganttTasks.filter(x => x.phase === phase)" :key="t.id" class="border-b border-border-light hover:bg-surface/50 transition-colors">
                 <td class="py-1.5 px-2 sticky left-0 bg-surface z-10">
                   <input type="text" v-model="t.name" placeholder="Tarea…"
                     class="w-full px-2 py-1 text-xs border border-transparent rounded outline-none focus:border-primary bg-transparent" />
@@ -280,7 +280,7 @@ function ganttBarStyle(t) {
           </tbody>
         </table>
       </div>
-      <button @click="addGanttPhase()" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-gray-50 hover:border-primary-border transition cursor-pointer">+ Agregar sección</button>
+      <button @click="addGanttPhase()" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar sección</button>
       <div class="mt-1.5 text-[10px] text-text-dim">
         <span>{{ state.ganttSpan }} {{ { hour: 'horas', day: 'días', week: 'semanas', month: 'meses', year: 'años' }[state.ganttUnit] || 'unidades' }} de alcance</span>
       </div>

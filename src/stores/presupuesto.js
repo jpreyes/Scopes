@@ -57,6 +57,7 @@ function makeDefaultCosteo() {
 
 const state = reactive({
   dbConnected: false,
+  user: null,
   activeSection: 'propuestas',
   sidebarOpen: true,
   activeTab: 'propuesta',
@@ -91,7 +92,7 @@ const state = reactive({
   clientRespSig: '',
 
   headerClient: '',
-  subheader: 'LEVANTAMIENTO Y ESTUDIO DE LOSA',
+  subheader: '',
   coverBg: 'image2.png',
 
   presentacion: '', servicio: '', objetivo: '', alcance: '', ventajas: '',
@@ -123,18 +124,7 @@ const state = reactive({
   ganttPhases: ['CAPTURA DE DATOS', 'ANÁLISIS DE DATOS'],
   ganttUnit: 'day',
   ganttSpan: 14,
-  ganttTasks: [
-    { id: uid(), name: 'Acreditación empresa y personal', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 2, dependsOn: null },
-    { id: uid(), name: 'Inducción personal', phase: 'CAPTURA DE DATOS', startDay: 1, endDay: 1, dependsOn: null },
-    { id: uid(), name: 'Auscultación de armadura', phase: 'CAPTURA DE DATOS', startDay: 2, endDay: 4, dependsOn: null },
-    { id: uid(), name: 'Ensayo carbonatación del hormigón', phase: 'CAPTURA DE DATOS', startDay: 3, endDay: 5, dependsOn: null },
-    { id: uid(), name: 'Ensayos ultrasónicos', phase: 'CAPTURA DE DATOS', startDay: 3, endDay: 6, dependsOn: null },
-    { id: uid(), name: 'Índice esclerométrico', phase: 'CAPTURA DE DATOS', startDay: 4, endDay: 6, dependsOn: null },
-    { id: uid(), name: 'Levantamiento geométrico', phase: 'CAPTURA DE DATOS', startDay: 5, endDay: 7, dependsOn: null },
-    { id: uid(), name: 'Estudios y laboratorio', phase: 'ANÁLISIS DE DATOS', startDay: 8, endDay: 11, dependsOn: null },
-    { id: uid(), name: 'Elaboración de informes', phase: 'ANÁLISIS DE DATOS', startDay: 10, endDay: 13, dependsOn: null },
-    { id: uid(), name: 'Entrega informes y recomendaciones', phase: 'ANÁLISIS DE DATOS', startDay: 14, endDay: 14, dependsOn: null },
-  ],
+  ganttTasks: [],
 
   loadVersion: 0,
   budgetList: [],
@@ -148,9 +138,48 @@ async function dbLogin() {
   const saved = sessionStorage.getItem('pb_token')
   if (saved) { state.dbConnected = pb.restoreToken(); return }
   try {
-    await pb.login('admin@scopes.cl', 'admin123')
+    const email = import.meta.env.VITE_PB_EMAIL || 'admin@scopes.cl'
+    const password = import.meta.env.VITE_PB_PASSWORD || 'admin123'
+    await pb.login(email, password)
     state.dbConnected = true
+    migrateLocalToPB()
   } catch { state.dbConnected = false }
+}
+
+async function migrateLocalToPB() {
+  try {
+    const [pbQuotes, pbClients, pbCatalog] = await Promise.all([
+      pb.getQuotes().catch(() => []),
+      pb.getClients().catch(() => []),
+      pb.getCatalog().catch(() => []),
+    ])
+    const pbQuoteNums = new Set(pbQuotes.map(q => q.quoteNumber).filter(Boolean))
+    const pbClientKeys = new Set(pbClients.map(c => c.name + '|' + (c.email || '')))
+    const pbCatalogKeys = new Set(pbCatalog.map(c => c.name))
+
+    // Migrate local budgets not in PB
+    const localList = JSON.parse(localStorage.getItem('presto_list') || '[]')
+    for (const item of localList) {
+      if (pbQuoteNums.has(item.quoteNumber)) continue
+      const key = 'presto_' + item.quoteNumber.replace(/\//g, '_')
+      const data = JSON.parse(localStorage.getItem(key))
+      if (data) await pb.saveQuote(data).catch(() => {})
+    }
+
+    // Migrate local clients not in PB
+    const localClients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
+    for (const c of localClients) {
+      if (pbClientKeys.has(c.name + '|' + (c.email || ''))) continue
+      await pb.saveClient(c).catch(() => {})
+    }
+
+    // Migrate local catalog items not in PB
+    const localCatalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
+    for (const item of localCatalog) {
+      if (pbCatalogKeys.has(item.name)) continue
+      await pb.saveCatalogItem(item).catch(() => {})
+    }
+  } catch (_) { /* silent fail — migration is best-effort */ }
 }
 
 const proposalSubtotal = computed(() => state.proposalItems.reduce((s, i) => s + (i.qty || 0) * (i.price || 0), 0))
@@ -286,6 +315,39 @@ function generateQuoteNumber() {
   localStorage.setItem('presto_counter', JSON.stringify(n))
 }
 
+function resetBudget() {
+  const defaults = {
+    quoteNumber: '', quoteRev: '01', quoteDate: new Date().toISOString().slice(0, 10), validUntil: '',
+    proposalStatus: 'borrador', awardAmount: null, projectNotes: '',
+    currency: '$', contactPerson: '',
+    clientName: '', clientAddr: '', clientPhone: '', clientEmail: '',
+    clientResp: '', clientRespSig: '',
+    headerClient: '', subheader: '',
+    propuestaSections: [
+      { id: uid(), label: 'PRESENTACIÓN', content: '' },
+      { id: uid(), label: 'SERVICIO', content: '' },
+      { id: uid(), label: 'OBJETIVO', content: '' },
+      { id: uid(), label: 'ALCANCE DEL SERVICIO', content: '' },
+      { id: uid(), label: 'VENTAJAS Y DIFERENCIADORES', content: '' },
+      { id: uid(), label: 'NOTAS / CONDICIONES', content: '' },
+      { id: uid(), label: 'ENTREGABLES', content: '' },
+    ],
+    proposalItems: [{ desc: '', qty: 1, price: 0 }],
+    costeoCategories: [],
+    costeoGroups: [],
+    printSections: { economica: true, gantt: true },
+    ganttPhases: ['CAPTURA DE DATOS', 'ANÁLISIS DE DATOS'],
+    ganttUnit: 'day', ganttSpan: 14,
+    ganttTasks: [],
+    loadVersion: 0,
+  }
+  // Preserve company info
+  const company = { company: state.company, companyAddr: state.companyAddr, companyPhone: state.companyPhone, companyEmail: state.companyEmail, companyResp: state.companyResp, companyRespSig: state.companyRespSig }
+  Object.assign(state, defaults, company)
+  generateQuoteNumber()
+  state.propuestaSections.forEach(s => { if (state.printSections[s.id] === undefined) state.printSections[s.id] = true })
+}
+
 function collectData() {
   return {
     ...state.quoteNumber && { quoteNumber: state.quoteNumber },
@@ -295,7 +357,7 @@ function collectData() {
     company: state.company, companyAddr: state.companyAddr,
     companyPhone: state.companyPhone, companyEmail: state.companyEmail,
     companyResp: state.companyResp, companyRespSig: state.companyRespSig,
-    client: state.clientName, clientAddr: state.clientAddr,
+    clientName: state.clientName, clientAddr: state.clientAddr,
     clientPhone: state.clientPhone, clientEmail: state.clientEmail,
     clientResp: state.clientResp, clientRespSig: state.clientRespSig,
     headerClient: state.headerClient,
@@ -323,7 +385,7 @@ function saveBudget() {
   const key = 'presto_' + data.quoteNumber.replace(/\//g, '_')
   let list = JSON.parse(localStorage.getItem('presto_list') || '[]')
   if (!list.find(x => x.quoteNumber === data.quoteNumber)) {
-    list.push({ quoteNumber: data.quoteNumber, client: data.client, date: data.quoteDate, savedAt: new Date().toISOString() })
+    list.push({ quoteNumber: data.quoteNumber, client: data.clientName || data.client, date: data.quoteDate, savedAt: new Date().toISOString() })
     localStorage.setItem('presto_list', JSON.stringify(list))
   }
   localStorage.setItem(key, JSON.stringify(data))
@@ -334,9 +396,21 @@ function saveBudget() {
   toast('Guardado ✓')
 }
 
-function loadBudgetByNum(qn) {
-  const key = 'presto_' + qn.replace(/\//g, '_')
-  const data = JSON.parse(localStorage.getItem(key))
+async function loadBudgetByNum(qn) {
+  let data = null
+  if (state.dbConnected) {
+    try {
+      const pbRecord = await pb.getQuoteByNum(qn)
+      if (pbRecord) {
+        data = { ...pbRecord }
+        if (data.clientName && !data.client) data.client = data.clientName
+      }
+    } catch (_) { /* fallback to localStorage */ }
+  }
+  if (!data) {
+    const key = 'presto_' + qn.replace(/\//g, '_')
+    data = JSON.parse(localStorage.getItem(key))
+  }
   if (!data) return
   Object.assign(state, {
     quoteNumber: data.quoteNumber || '',
@@ -351,7 +425,7 @@ function loadBudgetByNum(qn) {
     company: data.company || '', companyAddr: data.companyAddr || '',
     companyPhone: data.companyPhone || '', companyEmail: data.companyEmail || '',
     companyResp: data.companyResp || '', companyRespSig: data.companyRespSig || '',
-    clientName: data.client || '', clientAddr: data.clientAddr || '',
+    clientName: data.clientName || data.client || '', clientAddr: data.clientAddr || '',
     clientPhone: data.clientPhone || '', clientEmail: data.clientEmail || '',
     clientResp: data.clientResp || '', clientRespSig: data.clientRespSig || '',
     headerClient: data.headerClient || '',
@@ -394,12 +468,12 @@ function loadBudgetByNum(qn) {
   state.activeTab = 'propuesta'
 }
 
-function loadBudget() {
+async function loadBudget() {
   const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
   if (!list.length) { alert('No hay presupuestos guardados.'); return }
   const msg = 'Presupuestos guardados:\n' + list.map((x, i) => `${i + 1}. ${x.quoteNumber} - ${x.client || '?'} (${x.date})`).join('\n') + '\n\nN° a cargar:'
   const idx = parseInt(prompt(msg)) - 1
-  if (!isNaN(idx) && idx >= 0 && idx < list.length) loadBudgetByNum(list[idx].quoteNumber)
+  if (!isNaN(idx) && idx >= 0 && idx < list.length) await loadBudgetByNum(list[idx].quoteNumber)
 }
 
 function deleteBudget(qn) {
@@ -509,7 +583,7 @@ function loadDashboardFallback() {
   }
 }
 
-function seedSampleData() {
+async function seedSampleData() {
   // Seed clients
   const sampleClients = [
     { id: 'c1', name: 'Carlos Muñoz', company: 'Constructora Los Andes', email: 'carlos@clandes.cl', phone: '+56 9 8111 0001', address: 'Av. Libertador 1500, Santiago', notes: 'Cliente frecuente - obras civiles' },
@@ -726,6 +800,16 @@ function seedSampleData() {
   // Restore counter (set to last number so new quotes continue from 7)
   localStorage.setItem('presto_counter', JSON.stringify(Math.max(6, savedCounter)))
 
+  if (state.dbConnected) {
+    for (const c of sampleClients) await pb.saveClient(c).catch(() => {})
+    for (const item of sampleCatalog) await pb.saveCatalogItem(item).catch(() => {})
+    for (const s of samples) {
+      const key = 'presto_' + s.quoteNumber.replace(/\//g, '_')
+      const data = JSON.parse(localStorage.getItem(key))
+      if (data) await pb.saveQuote(data).catch(() => {})
+    }
+  }
+
   loadHistorial()
   loadClients()
   loadCatalog()
@@ -910,6 +994,6 @@ export function usePresupuesto() {
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
     saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient, loadCatalog, saveCatalogItem, deleteCatalogItem,
-    exportCosteoExcel, exportHistorialExcel, toast, dbLogin,
+    exportCosteoExcel, exportHistorialExcel, toast, dbLogin, resetBudget, generateQuoteNumber,
   }
 }

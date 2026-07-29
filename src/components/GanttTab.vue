@@ -100,18 +100,18 @@ function calcBarStyle(t) {
       <h2 class="text-base font-bold text-text">CARTA GANTT</h2>
       <div class="flex items-center gap-2 flex-wrap">
         <select v-model="state.ganttUnit" @change="state.ganttSpan = state.ganttUnit === 'hour' ? 24 : state.ganttUnit === 'month' ? 3 : state.ganttUnit === 'year' ? 1 : 14; syncGanttSpan(true)"
-          class="px-2 py-1 border border-gray-200 rounded-lg text-xs bg-white outline-none focus:border-primary">
+          class="px-2 py-1 border border-border rounded-lg text-xs bg-bg-app text-text outline-none focus:border-primary">
           <option v-for="(l, k) in unitLabels" :key="k" :value="k">{{ l }}</option>
         </select>
         <input type="number" :value="state.ganttSpan" @change="trimGanttTasks($event.target.valueAsNumber || 1)"
-          class="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-primary" />
+          class="w-16 px-2 py-1 border border-border rounded-lg text-xs text-right outline-none focus:border-primary" />
         <span class="text-xs text-text-muted">{{ unitLabels[state.ganttUnit] || 'Unidades' }}</span>
         <button @click="addGanttPhase()"
           class="px-3 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">+ Sección</button>
       </div>
     </div>
 
-    <div class="overflow-x-auto border border-gray-200 rounded-xl">
+    <div class="overflow-x-auto border border-border rounded-xl">
       <table class="w-full text-xs border-collapse">
         <thead>
           <tr class="bg-slate-800 text-white">
@@ -130,8 +130,8 @@ function calcBarStyle(t) {
         </thead>
           <tbody>
             <template v-for="(phase, pi) in state.ganttPhases" :key="phase">
-              <tr class="bg-gray-100">
-                <td class="py-2 px-3 font-bold text-text text-xs sticky left-0 bg-gray-100 z-10 w-48">
+              <tr class="bg-surface">
+                <td class="py-2 px-3 font-bold text-text text-xs sticky left-0 bg-surface z-10 w-48">
                   <div class="flex items-center justify-between gap-2">
                     <span class="text-slate-500 font-mono text-[10px] mr-1">{{ pi+1 }}.</span>
                     <input type="text" v-model="state.ganttPhases[pi]"
@@ -141,15 +141,15 @@ function calcBarStyle(t) {
                 </td>
                 <td :colspan="headers.totalUnits"></td>
               </tr>
-              <tr v-for="(t, ti) in state.ganttTasks.filter(x => x.phase === phase)" :key="t.id" class="border-b border-gray-100 hover:bg-gray-50/50 transition">
-                <td class="py-1.5 px-2 sticky left-0 bg-white z-10 w-48">
+              <tr v-for="(t, ti) in state.ganttTasks.filter(x => x.phase === phase)" :key="t.id" class="border-b border-gray-100 hover:bg-surface/50 transition">
+                <td class="py-1.5 px-2 sticky left-0 bg-surface z-10 w-48">
                   <div class="flex items-center gap-1 min-w-0">
                     <span class="text-text-dim font-mono text-[10px] w-6 shrink-0 text-right">{{ pi+1 }}.{{ ti+1 }}</span>
-                    <button @click="moveGanttTask(t.id, -1)" :disabled="ti === 0" class="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition cursor-pointer text-[10px] px-0.5" title="Subir">&#9650;</button>
-                    <button @click="moveGanttTask(t.id, 1)" :disabled="ti >= state.ganttTasks.filter(x => x.phase === phase).length - 1" class="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition cursor-pointer text-[10px] px-0.5" title="Bajar">&#9660;</button>
+                    <button @click="moveGanttTask(t.id, -1)" :disabled="ti === 0" class="text-text-dim hover:text-gray-600 disabled:opacity-20 transition cursor-pointer text-[10px] px-0.5" title="Subir">&#9650;</button>
+                    <button @click="moveGanttTask(t.id, 1)" :disabled="ti >= state.ganttTasks.filter(x => x.phase === phase).length - 1" class="text-text-dim hover:text-gray-600 disabled:opacity-20 transition cursor-pointer text-[10px] px-0.5" title="Bajar">&#9660;</button>
                     <input type="number" v-model.number="t.startDay" min="1" max="365" @change="syncGanttSpan(true)"
                       class="w-10 px-1 py-1 text-center text-[10px] border border-gray-100 rounded outline-none focus:border-primary bg-transparent" placeholder="Ini" />
-                    <span class="text-gray-300">→</span>
+                    <span class="text-text-dim">→</span>
                     <input type="number" v-model.number="t.endDay" min="1" max="365" @change="syncGanttSpan(true)"
                       class="w-10 px-1 py-1 text-center text-[10px] border border-gray-100 rounded outline-none focus:border-primary bg-transparent" placeholder="Fin" />
                     <input type="text" v-model="t.name" placeholder="Tarea…"

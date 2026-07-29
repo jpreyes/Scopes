@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { usePresupuesto } from '../stores/presupuesto.js'
 const { state, fmt, computed, recalcSales, addCosteoCategory, removeCosteoCategory, addCosteoItem, removeCosteoItem, addCosteoGroup, removeCosteoGroup, addItemToGroup, removeItemFromGroup, findItemByKey, groupTotal, syncSelectedToProposal, exportCosteoExcel } = usePresupuesto()
 
@@ -25,6 +26,7 @@ function onDragStartGroup(e, itemKey, groupId) {
 
 function onDrop(e, groupId) {
   e.preventDefault()
+  if (dragSource.type === 'group' && dragSource.groupId === groupId) return
   const raw = e.dataTransfer.getData('text/plain')
   try {
     const parsed = JSON.parse(raw)
@@ -45,7 +47,7 @@ function onDrop(e, groupId) {
   }
 }
 
-let newGroupName = ''
+const newGroupName = ref('')
 </script>
 
 <template>
@@ -81,10 +83,10 @@ let newGroupName = ''
 
       <div class="flex flex-col gap-4 mb-5">
         <div v-for="cat in state.costeoCategories" :key="cat.id"
-          class="border border-border rounded-xl overflow-hidden bg-white hover:shadow-sm transition">
+          class="border border-border rounded-xl overflow-hidden bg-surface hover:shadow-lg transition">
 
           <div draggable="true" @dragstart="onDragStartCategory($event, cat)"
-            class="flex justify-between items-center px-4 py-2.5 bg-gray-50 border-b border-border cursor-grab hover:bg-gray-100 transition">
+            class="flex justify-between items-center px-4 py-2.5 bg-surface/50 border-b border-border cursor-grab hover:bg-surface transition">
             <div class="flex items-center gap-1 flex-1 min-w-0">
               <span class="text-text-dim shrink-0 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -100,14 +102,14 @@ let newGroupName = ''
             <div v-for="(it, i) in cat.items" :key="it._key"
               draggable="true"
               @dragstart="onDragStart($event, it._key)"
-              class="flex items-center gap-2 p-2 mb-1 bg-gray-50 border border-border-light rounded-lg hover:border-blue-400 transition cursor-grab">
+              class="flex items-center gap-2 p-2 mb-1 bg-surface/50 border border-border-light rounded-lg hover:border-blue-400 transition cursor-grab">
 
               <span class="text-text-dim shrink-0 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
 
               <div class="flex-1 min-w-0">
-                <input type="text" v-model="it.desc" class="w-full px-2 py-1 border border-transparent rounded text-sm font-semibold outline-none focus:border-primary focus:bg-white transition" />
+                <input type="text" v-model="it.desc" class="w-full px-2 py-1 border border-transparent rounded text-sm font-semibold outline-none focus:border-primary focus:bg-surface transition" />
                 <div class="flex gap-2 mt-1 flex-wrap items-center">
                   <label class="text-[10px] text-text-dim flex items-center gap-1">
                     C. <input type="number" v-model.number="it.qty" min="0" class="w-12 px-1 py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
@@ -132,11 +134,11 @@ let newGroupName = ''
           </div>
 
           <div class="px-3 pb-3">
-            <button @click="addCosteoItem(cat)" class="px-3 py-1 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-gray-50 transition cursor-pointer">+ Agregar item</button>
+            <button @click="addCosteoItem(cat)" class="px-3 py-1 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface/50 transition cursor-pointer">+ Agregar item</button>
           </div>
         </div>
       </div>
-      <button @click="addCosteoCategory()" class="w-full px-3 py-2 text-xs text-text-muted border border-dashed border-border rounded-xl hover:bg-gray-50 transition cursor-pointer">+ Agregar categoría</button>
+      <button @click="addCosteoCategory()" class="w-full px-3 py-2 text-xs text-text-muted border border-dashed border-border rounded-xl hover:bg-surface/50 transition cursor-pointer">+ Agregar categoría</button>
     </div>
 
     <!-- RIGHT: groups panel -->
@@ -151,11 +153,11 @@ let newGroupName = ''
         </div>
 
         <div v-for="g in state.costeoGroups" :key="g.id"
-          class="border border-border rounded-xl overflow-hidden bg-white"
+          class="border border-border rounded-xl overflow-hidden bg-surface"
           @dragover.prevent
           @drop="onDrop($event, g.id)">
 
-          <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-border">
+          <div class="flex items-center justify-between px-3 py-2 bg-surface/50 border-b border-border">
             <div class="flex items-center gap-1 flex-1 min-w-0">
               <input type="text" v-model="g.name"
                 class="w-full text-xs font-bold text-text bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-1 outline-none transition" />
@@ -170,7 +172,7 @@ let newGroupName = ''
             </div>
             <div v-for="(key, idx) in g.itemKeys" :key="key"
               draggable="true" @dragstart="onDragStartGroup($event, key, g.id)"
-              class="flex items-center justify-between px-2 py-1 mb-0.5 bg-gray-50 rounded text-[11px] cursor-grab hover:bg-gray-100 transition">
+              class="flex items-center justify-between px-2 py-1 mb-0.5 bg-surface/50 rounded text-[11px] cursor-grab hover:bg-surface transition">
               <span class="truncate flex-1">{{ findItemByKey(key)?.desc || '—' }}</span>
               <span class="font-semibold text-primary ml-1">{{ findItemByKey(key) ? fmt((findItemByKey(key).qty||0)*(findItemByKey(key).days||0)*(findItemByKey(key).sale||0)) : '' }}</span>
               <button @click="removeItemFromGroup(g.id, idx)" class="text-red-400 hover:text-red-600 text-xs ml-1 transition cursor-pointer">&times;</button>

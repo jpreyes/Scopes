@@ -89,8 +89,6 @@ onMounted(() => {
             <input type="text" v-model="state.subheader"
               class="text-xs sm:text-sm text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/20 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
           </div>
-          <input type="text" v-model="state.headerClient" :placeholder="state.clientName || 'Cliente'"
-            class="text-[10px] sm:text-xs text-white/40 placeholder-white/20 bg-transparent border-b border-transparent hover:border-white/20 focus:border-primary outline-none transition w-full max-w-[8rem] sm:max-w-xs px-0" />
         </div>
       </div>
       <div class="flex items-center gap-2 shrink-0">

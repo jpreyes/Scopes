@@ -12,6 +12,20 @@ function toast(msg) {
   toastTimer = setTimeout(() => { state.toast = '' }, 2500)
 }
 
+function who() { return (state.user && (state.user.name || state.user.email)) || 'Anónimo' }
+
+function withTrace(record, prev) {
+  const now = new Date().toISOString()
+  const user = who()
+  return {
+    ...record,
+    createdBy: record.createdBy || prev?.createdBy || user,
+    createdAt: record.createdAt || prev?.createdAt || now,
+    updatedBy: user,
+    updatedAt: now,
+  }
+}
+
 function fmtAmount(amount, currency) {
   let sym = '$ ', dec = 0
   if (currency === 'UF') { sym = 'UF '; dec = 2 }
@@ -109,6 +123,9 @@ const state = reactive({
 
   proposalItems: [],
   taxRate: 19,
+  aprobaciones: [],
+  createdBy: '',
+  ultimoTotalEnviado: 0,
 
   costeoMarkup: 20,
   costeoMarginMode: 'venta', // 'venta' | 'utilidad'
@@ -131,19 +148,66 @@ const state = reactive({
   dashboardData: { total: 0, counts: {}, totalAwardAmount: '$ 0', recent: [] },
   clients: [],
   catalog: [],
+  proyectos: [],
+  ingresos: [],
+  egresos: [],
   toast: '',
 })
 
 async function dbLogin() {
   const saved = sessionStorage.getItem('pb_token')
-  if (saved) { state.dbConnected = pb.restoreToken(); return }
+  if (saved) { state.dbConnected = pb.restoreToken(); dedupeQuotes(); migrarEstadosViejos(); return }
   try {
     const email = import.meta.env.VITE_PB_EMAIL || 'admin@scopes.cl'
     const password = import.meta.env.VITE_PB_PASSWORD || 'admin123'
     await pb.login(email, password)
     state.dbConnected = true
     migrateLocalToPB()
+    dedupeQuotes()
+    migrarEstadosViejos()
   } catch { state.dbConnected = false }
+}
+
+async function migrarEstadosViejos() {
+  if (!state.dbConnected) return
+  try {
+    const quotes = await pb.getQuotes()
+    const cambios = quotes.filter(q => q.proposalStatus === 'revision')
+    for (const q of cambios) {
+      await pb.saveQuote({ ...q, proposalStatus: 'en_revision' }).catch(() => {})
+    }
+    if (cambios.length) { loadHistorial(); loadDashboardData() }
+  } catch (_) { /* best-effort */ }
+}
+
+async function dedupeQuotes() {
+  if (!state.dbConnected) return
+  try {
+    const quotes = await pb.getQuotes()
+    const byNum = {}
+    quotes.forEach(q => {
+      if (!q.quoteNumber) return
+      ;(byNum[q.quoteNumber] = byNum[q.quoteNumber] || []).push(q)
+    })
+    const score = r => {
+      let s = 0
+      ;(r.proposalItems || []).forEach(i => { if (Number(i.price) > 0) s += 2 })
+      ;(r.propuestaSections || []).forEach(sec => { if (sec.content) s += 2 })
+      if (r.awardAmount) s += 1
+      if (r.proposalStatus) s += 1
+      return s
+    }
+    let removed = 0
+    for (const group of Object.values(byNum)) {
+      if (group.length < 2) continue
+      group.sort((a, b) => score(b) - score(a))
+      for (const dup of group.slice(1)) {
+        await pb.deleteQuote(dup.id).catch(() => {})
+        removed++
+      }
+    }
+    if (removed) { loadHistorial(); loadDashboardData() }
+  } catch (_) { /* best-effort */ }
 }
 
 async function migrateLocalToPB() {
@@ -179,6 +243,30 @@ async function migrateLocalToPB() {
       if (pbCatalogKeys.has(item.name)) continue
       await pb.saveCatalogItem(item).catch(() => {})
     }
+
+    // Migrate local finanzas records not in PB
+    const pbProyectos = await pb.getProyectos().catch(() => [])
+    const pbIngresos = await pb.getIngresos().catch(() => [])
+    const pbEgresos = await pb.getEgresos().catch(() => [])
+    const pbProyKeys = new Set(pbProyectos.map(p => p.nombre))
+    const pbIngKeys = new Set(pbIngresos.map(i => i.fecha + '|' + i.concepto + '|' + i.monto))
+    const pbEgrKeys = new Set(pbEgresos.map(e => e.fecha + '|' + e.concepto + '|' + e.monto))
+
+    const localProyectos = JSON.parse(localStorage.getItem('presto_proyectos') || '[]')
+    for (const p of localProyectos) {
+      if (pbProyKeys.has(p.nombre)) continue
+      await pb.saveProyecto(p).catch(() => {})
+    }
+    const localIngresos = JSON.parse(localStorage.getItem('presto_ingresos') || '[]')
+    for (const i of localIngresos) {
+      if (pbIngKeys.has(i.fecha + '|' + i.concepto + '|' + i.monto)) continue
+      await pb.saveIngreso(i).catch(() => {})
+    }
+    const localEgresos = JSON.parse(localStorage.getItem('presto_egresos') || '[]')
+    for (const e of localEgresos) {
+      if (pbEgrKeys.has(e.fecha + '|' + e.concepto + '|' + e.monto)) continue
+      await pb.saveEgreso(e).catch(() => {})
+    }
   } catch (_) { /* silent fail — migration is best-effort */ }
 }
 
@@ -204,6 +292,41 @@ const costeoUtilidad = computed(() => costeoTotalSale.value - costeoTotalCost.va
 const costeoMargen = computed(() => costeoTotalSale.value ? ((costeoTotalSale.value - costeoTotalCost.value) / costeoTotalSale.value * 100).toFixed(1) : '0')
 const selectedCount = computed(() => {
   return state.costeoGroups.reduce((s, g) => s + g.itemKeys.length, 0)
+})
+
+function sumByCurrency(list, field) {
+  const m = {}
+  list.forEach(r => {
+    const v = Number(r[field]) || 0
+    if (!v) return
+    const cur = r.moneda || '$'
+    m[cur] = (m[cur] || 0) + v
+  })
+  return m
+}
+
+function fmtMoney(amount, currency) { return fmtAmount(Number(amount) || 0, currency || '$') }
+
+function fmtMulti(map) {
+  const entries = Object.entries(map || {}).filter(([, v]) => v).sort((a, b) => b[1] - a[1])
+  if (!entries.length) return '$ 0'
+  return entries.map(([cur, v]) => fmtAmount(v, cur)).join('  ·  ')
+}
+
+const finKpis = computed(() => {
+  const recibido = sumByCurrency(state.ingresos.filter(r => r.estado === 'recibido'), 'monto')
+  const programado = sumByCurrency(state.ingresos.filter(r => r.estado === 'programado'), 'monto')
+  const pagado = sumByCurrency(state.egresos.filter(r => r.estado === 'pagado'), 'monto')
+  const pendiente = sumByCurrency(state.egresos.filter(r => r.estado === 'pendiente'), 'monto')
+  const utilidad = {}
+  new Set([...Object.keys(recibido), ...Object.keys(pagado)]).forEach(k => {
+    utilidad[k] = (recibido[k] || 0) - (pagado[k] || 0)
+  })
+  return {
+    recibido, programado, pagado, pendiente, utilidad,
+    proyectosActivos: state.proyectos.filter(p => p.status === 'activo').length,
+    proyectosTotal: state.proyectos.length,
+  }
 })
 
 function findItemByKey(key) {
@@ -333,6 +456,9 @@ function resetBudget() {
       { id: uid(), label: 'ENTREGABLES', content: '' },
     ],
     proposalItems: [{ desc: '', qty: 1, price: 0 }],
+    aprobaciones: [],
+    createdBy: '',
+    ultimoTotalEnviado: 0,
     costeoCategories: [],
     costeoGroups: [],
     printSections: { economica: true, gantt: true },
@@ -365,6 +491,8 @@ function collectData() {
     propuestaSections: JSON.parse(JSON.stringify(state.propuestaSections.map(s => ({ ...s })))),
     proposalItems: JSON.parse(JSON.stringify(state.proposalItems)),
     taxRate: state.taxRate,
+    aprobaciones: JSON.parse(JSON.stringify(state.aprobaciones)),
+    ultimoTotalEnviado: state.ultimoTotalEnviado || 0,
     costeoMarkup: state.costeoMarkup,
     costeoMarginMode: state.costeoMarginMode,
     costeo: state.costeoCategories.map(c => ({
@@ -381,20 +509,135 @@ function collectData() {
 }
 
 function saveBudget() {
-  const data = collectData()
-  const key = 'presto_' + data.quoteNumber.replace(/\//g, '_')
+  persistBudget()
+  generateQuoteNumber()
+}
+
+function persistBudget() {
+  const key = 'presto_' + state.quoteNumber.replace(/\//g, '_')
+  const prevLS = JSON.parse(localStorage.getItem(key) || 'null')
+  const data = withTrace(collectData(), prevLS)
+  state.createdBy = data.createdBy
   let list = JSON.parse(localStorage.getItem('presto_list') || '[]')
   if (!list.find(x => x.quoteNumber === data.quoteNumber)) {
     list.push({ quoteNumber: data.quoteNumber, client: data.clientName || data.client, date: data.quoteDate, savedAt: new Date().toISOString() })
     localStorage.setItem('presto_list', JSON.stringify(list))
   }
   localStorage.setItem(key, JSON.stringify(data))
-  if (state.dbConnected) pb.saveQuote(data).catch(() => {})
-  generateQuoteNumber()
-  loadHistorial()
-  loadDashboardData()
+  if (state.dbConnected) {
+    pb.getQuoteByNum(data.quoteNumber)
+      .then(prev => {
+        const final = withTrace(data, prev)
+        localStorage.setItem(key, JSON.stringify(final))
+        return pb.saveQuote(final).catch(() => {})
+      })
+      .catch(() => pb.saveQuote(data).catch(() => {}))
+      .finally(() => { loadHistorial(); loadDashboardData() })
+  } else {
+    loadHistorial()
+    loadDashboardData()
+  }
   toast('Guardado ✓')
 }
+
+function aprobarPropuesta() {
+  const user = who()
+  if (state.proposalStatus !== 'en_revision') { toast('Solo se puede aprobar cuando está en revisión'); return }
+  if (state.aprobaciones.some(a => a.by === user)) { toast('Ya aprobaste esta propuesta'); return }
+  if (state.createdBy && state.createdBy === user) { toast('El creador no puede aprobar su propia propuesta'); return }
+  state.aprobaciones.push({ by: user, at: new Date().toISOString() })
+  if (aprobacionInfo.value.count >= 2) {
+    state.proposalStatus = 'aprobada'
+    toast('Propuesta aprobada por la revisión interna ✓')
+  } else {
+    toast('Aprobación registrada (' + aprobacionInfo.value.count + '/2)')
+  }
+  persistBudget()
+}
+
+// --- Transiciones de estado ---
+
+function enviarARevision() {
+  const desde = state.proposalStatus
+  if (desde !== 'borrador' && desde !== 'modificacion' && desde !== 'rectificacion') return
+  if (desde === 'modificacion' || desde === 'rectificacion') state.aprobaciones = []
+  state.proposalStatus = 'en_revision'
+  persistBudget()
+  toast('Propuesta enviada a revisión interna ✓')
+}
+
+function solicitarCambios() {
+  if (state.proposalStatus !== 'en_revision') return
+  state.aprobaciones = []
+  state.proposalStatus = 'modificacion'
+  persistBudget()
+  toast('Se solicitaron cambios al creador')
+}
+
+function enviarACliente() {
+  if (state.proposalStatus !== 'aprobada') return
+  state.ultimoTotalEnviado = proposalTotal.value
+  state.proposalStatus = 'enviada'
+  persistBudget()
+  toast('Propuesta enviada al cliente ✓')
+}
+
+function rectificarPropuesta() {
+  if (state.proposalStatus !== 'enviada') return
+  state.proposalStatus = 'rectificacion'
+  persistBudget()
+  toast('Rectificación del cliente registrada')
+}
+
+async function reenviarACliente() {
+  if (state.proposalStatus !== 'rectificacion') return
+  const totalActual = proposalTotal.value
+  let totalPrev = null
+  if (state.dbConnected) {
+    try {
+      const prev = await pb.getQuoteByNum(state.quoteNumber)
+      if (prev) totalPrev = (prev.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+    } catch (_) {}
+  }
+  if (totalPrev === null) {
+    const key = 'presto_' + state.quoteNumber.replace(/\//g, '_')
+    const prev = JSON.parse(localStorage.getItem(key) || 'null')
+    if (prev) totalPrev = (prev.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+  }
+  if (totalPrev !== null && Math.abs(totalActual - totalPrev) > 0.01) {
+    state.aprobaciones = []
+    state.proposalStatus = 'en_revision'
+    persistBudget()
+    toast('El monto cambió — requiere nueva revisión interna')
+    return
+  }
+  state.proposalStatus = 'enviada'
+  persistBudget()
+  toast('Propuesta reenviada al cliente ✓')
+}
+
+function adjudicarPropuesta() {
+  if (state.proposalStatus !== 'enviada') return
+  state.proposalStatus = 'adjudicada'
+  persistBudget()
+  toast('Propuesta adjudicada ✓')
+}
+
+function rechazarPropuesta() {
+  if (state.proposalStatus !== 'enviada') return
+  state.proposalStatus = 'rechazada'
+  persistBudget()
+  toast('Propuesta rechazada')
+}
+
+const aprobacionInfo = computed(() => {
+  const unicos = new Set(state.aprobaciones.map(a => a.by))
+  return {
+    lista: state.aprobaciones.map(a => ({ ...a })),
+    count: unicos.size,
+    listaParaEnviar: unicos.size >= 2,
+  }
+})
 
 async function loadBudgetByNum(qn) {
   let data = null
@@ -432,6 +675,9 @@ async function loadBudgetByNum(qn) {
     subheader: data.subheader || '',
     proposalItems: (data.proposalItems || []).map(x => ({ ...x })),
     taxRate: data.taxRate || 19,
+    aprobaciones: (data.aprobaciones || []).map(a => ({ ...a })),
+    createdBy: data.createdBy || '',
+    ultimoTotalEnviado: data.ultimoTotalEnviado || 0,
     costeoMarkup: data.costeoMarkup || 20,
     costeoMarginMode: data.costeoMarginMode || 'venta',
   })
@@ -490,42 +736,70 @@ function deleteBudget(qn) {
 function loadHistorial() {
   if (state.dbConnected) {
     pb.getQuotes().then(quotes => {
-      const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
-      state.budgetList = quotes.map(q => {
-        const status = q.proposalStatus || 'borrador'
+      const list = quotes.map(q => {
+        const status = normalizeStatus(q.proposalStatus)
         const total = (q.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
         return {
           quoteNumber: q.quoteNumber, client: q.clientName || q.client || '-', date: q.quoteDate || '-',
           total: fmtAmount(total, q.currency || '$'),
+          currency: q.currency || '$',
           status, statusLabel: STATUS_LABELS[status] || 'Borrador',
           statusColor: STATUS_COLORS[status] || 'bg-gray-400',
           awardAmount: q.awardAmount || null,
+          createdBy: q.createdBy || '', createdAt: q.createdAt || '',
+          updatedBy: q.updatedBy || '', updatedAt: q.updatedAt || '',
+          aprobaciones: q.aprobaciones || [],
         }
       })
+      state.budgetList = list.sort((a, b) => (b.date === '-' ? '' : b.date).localeCompare(a.date === '-' ? '' : a.date) || String(b.quoteNumber).localeCompare(String(a.quoteNumber)))
     }).catch(() => loadHistorialFallback())
   } else { loadHistorialFallback() }
 }
 function loadHistorialFallback() {
   const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
-  const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
-  const STATUS_COLORS = { borrador: 'bg-gray-400', enviada: 'bg-blue-500', revision: 'bg-amber-500', aprobada: 'bg-emerald-500', rechazada: 'bg-red-500', adjudicada: 'bg-primary' }
   state.budgetList = list.slice().reverse().map(item => {
     const full = JSON.parse(localStorage.getItem('presto_' + item.quoteNumber.replace(/\//g, '_')))
     const total = full ? full.proposalItems.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0) : 0
-    const status = full?.proposalStatus || 'borrador'
+    const status = normalizeStatus(full?.proposalStatus || 'borrador')
     return {
       ...item,
       total: fmtAmount(total, full?.currency || '$'),
+      currency: full?.currency || '$',
       status,
       statusLabel: STATUS_LABELS[status] || 'Borrador',
       statusColor: STATUS_COLORS[status] || 'bg-gray-400',
       awardAmount: full?.awardAmount || null,
+      createdBy: full?.createdBy || '', createdAt: full?.createdAt || '',
+      updatedBy: full?.updatedBy || '', updatedAt: full?.updatedAt || '',
+      aprobaciones: full?.aprobaciones || [],
     }
   })
 }
 
-const STATUS_LABELS = { borrador: 'Borrador', enviada: 'Enviada', revision: 'En Revisión', aprobada: 'Aprobada', rechazada: 'Rechazada', adjudicada: 'Adjudicada' }
-const STATUS_COLORS = { borrador: 'bg-gray-400', enviada: 'bg-blue-500', revision: 'bg-amber-500', aprobada: 'bg-emerald-500', rechazada: 'bg-red-500', adjudicada: 'bg-primary' }
+const STATUS_LABELS = {
+  borrador: 'Borrador',
+  en_revision: 'En Revisión',
+  modificacion: 'Requiere cambios',
+  aprobada: 'Aprobada',
+  enviada: 'Enviada',
+  rectificacion: 'Rectificación',
+  adjudicada: 'Adjudicada',
+  rechazada: 'Rechazada',
+  revision: 'En Revisión',
+}
+const STATUS_COLORS = {
+  borrador: 'bg-gray-400',
+  en_revision: 'bg-amber-500',
+  modificacion: 'bg-orange-500',
+  aprobada: 'bg-emerald-500',
+  enviada: 'bg-blue-500',
+  rectificacion: 'bg-violet-500',
+  adjudicada: 'bg-primary',
+  rechazada: 'bg-red-500',
+  revision: 'bg-amber-500',
+}
+
+function normalizeStatus(s) { return s === 'revision' ? 'en_revision' : s || 'borrador' }
 
 function loadDashboardData() {
   if (state.dbConnected) {
@@ -533,11 +807,11 @@ function loadDashboardData() {
   } else { loadDashboardFallback() }
 }
 function processDashboard(quotes) {
-  const counts = { borrador: 0, enviada: 0, revision: 0, aprobada: 0, rechazada: 0, adjudicada: 0 }
+  const counts = { borrador: 0, en_revision: 0, modificacion: 0, aprobada: 0, enviada: 0, rectificacion: 0, adjudicada: 0, rechazada: 0 }
   let totalAwardAmount = 0
   const recent = []
   quotes.forEach(q => {
-    const status = q.proposalStatus || 'borrador'
+    const status = normalizeStatus(q.proposalStatus)
     counts[status] = (counts[status] || 0) + 1
     if (q.awardAmount) totalAwardAmount += Number(q.awardAmount)
     const total = (q.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
@@ -552,7 +826,7 @@ function processDashboard(quotes) {
 }
 function loadDashboardFallback() {
   const list = JSON.parse(localStorage.getItem('presto_list') || '[]')
-  const counts = { borrador: 0, enviada: 0, revision: 0, aprobada: 0, rechazada: 0, adjudicada: 0 }
+  const counts = { borrador: 0, en_revision: 0, modificacion: 0, aprobada: 0, enviada: 0, rectificacion: 0, adjudicada: 0, rechazada: 0 }
   let totalAwardAmount = 0
   const recent = []
 
@@ -560,7 +834,7 @@ function loadDashboardFallback() {
     const key = 'presto_' + item.quoteNumber.replace(/\//g, '_')
     const full = JSON.parse(localStorage.getItem(key))
     if (!full) return
-    const status = full.proposalStatus || 'borrador'
+    const status = normalizeStatus(full.proposalStatus || 'borrador')
     counts[status] = (counts[status] || 0) + 1
     if (full.awardAmount) totalAwardAmount += Number(full.awardAmount)
     const total = full.proposalItems.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
@@ -597,18 +871,18 @@ async function seedSampleData() {
 
   // Seed catalog
   const sampleCatalog = [
-    { id: 'cat1', name: 'Ingeniero Senior', price: 350000, unit: 'día', category: 'Personal' },
-    { id: 'cat2', name: 'Ingeniero Junior', price: 200000, unit: 'día', category: 'Personal' },
-    { id: 'cat3', name: 'Técnico Especializado', price: 120000, unit: 'día', category: 'Personal' },
-    { id: 'cat4', name: 'Scanner de Armadura PM8000', price: 80000, unit: 'día', category: 'Equipos' },
-    { id: 'cat5', name: 'Ultrasonido Pundit 200', price: 75000, unit: 'día', category: 'Equipos' },
-    { id: 'cat6', name: 'Esclerómetro ZC3-A', price: 45000, unit: 'día', category: 'Equipos' },
-    { id: 'cat7', name: 'Ensayo de Carbonatación', price: 35000, unit: 'und', category: 'Ensayos' },
-    { id: 'cat8', name: 'Extracción de Testigos', price: 90000, unit: 'und', category: 'Ensayos' },
-    { id: 'cat9', name: 'Informe Técnico', price: 500000, unit: 'global', category: 'Informes' },
-    { id: 'cat10', name: 'Modelación BIM', price: 650000, unit: 'global', category: 'Informes' },
-    { id: 'cat11', name: 'Pasaje Aéreo Nacional', price: 120000, unit: 'und', category: 'Viáticos' },
-    { id: 'cat12', name: 'Hotel', price: 75000, unit: 'noche', category: 'Viáticos' },
+    { id: 'cat1', name: 'Ingeniero Senior', price: 350000, unit: 'día', category: 'Personal', tipo: 'recurso' },
+    { id: 'cat2', name: 'Ingeniero Junior', price: 200000, unit: 'día', category: 'Personal', tipo: 'recurso' },
+    { id: 'cat3', name: 'Técnico Especializado', price: 120000, unit: 'día', category: 'Personal', tipo: 'recurso' },
+    { id: 'cat4', name: 'Scanner de Armadura PM8000', price: 80000, unit: 'día', category: 'Equipos', tipo: 'recurso' },
+    { id: 'cat5', name: 'Ultrasonido Pundit 200', price: 75000, unit: 'día', category: 'Equipos', tipo: 'recurso' },
+    { id: 'cat6', name: 'Esclerómetro ZC3-A', price: 45000, unit: 'día', category: 'Equipos', tipo: 'recurso' },
+    { id: 'cat7', name: 'Ensayo de Carbonatación', price: 35000, unit: 'und', category: 'Ensayos', tipo: 'producto' },
+    { id: 'cat8', name: 'Extracción de Testigos', price: 90000, unit: 'und', category: 'Ensayos', tipo: 'producto' },
+    { id: 'cat9', name: 'Informe Técnico', price: 500000, unit: 'global', category: 'Informes', tipo: 'producto' },
+    { id: 'cat10', name: 'Modelación BIM', price: 650000, unit: 'global', category: 'Informes', tipo: 'producto' },
+    { id: 'cat11', name: 'Pasaje Aéreo Nacional', price: 120000, unit: 'und', category: 'Viáticos', tipo: 'producto' },
+    { id: 'cat12', name: 'Hotel', price: 75000, unit: 'noche', category: 'Viáticos', tipo: 'producto' },
   ]
   localStorage.setItem('presto_catalog', JSON.stringify(sampleCatalog))
 
@@ -818,16 +1092,20 @@ async function seedSampleData() {
 }
 function loadClients() {
   if (state.dbConnected) {
-    pb.getClients().then(items => { state.clients = items }).catch(() => {
+    pb.getClients().then(items => { state.clients = items.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')) }).catch(() => {
       state.clients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
     })
   } else {
     state.clients = JSON.parse(localStorage.getItem('presto_clients') || '[]')
   }
 }
-function saveClient(client) {
+async function saveClient(client) {
   if (state.dbConnected) {
-    pb.saveClient(client).catch(() => fallbackSaveClient(client))
+    try {
+      const saved = await pb.saveClient(client)
+      if (saved && saved.id && saved.id !== client.id) client.id = saved.id
+      loadClients()
+    } catch { fallbackSaveClient(client) }
   } else { fallbackSaveClient(client) }
 }
 function fallbackSaveClient(client) {
@@ -851,16 +1129,20 @@ function fallbackDeleteClient(id) {
 }
 function loadCatalog() {
   if (state.dbConnected) {
-    pb.getCatalog().then(items => { state.catalog = items }).catch(() => {
+    pb.getCatalog().then(items => { state.catalog = items.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')) }).catch(() => {
       state.catalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
     })
   } else {
     state.catalog = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
   }
 }
-function saveCatalogItem(item) {
+async function saveCatalogItem(item) {
   if (state.dbConnected) {
-    pb.saveCatalogItem(item).catch(() => fallbackSaveCatalogItem(item))
+    try {
+      const saved = await pb.saveCatalogItem(item)
+      if (saved && saved.id && saved.id !== item.id) item.id = saved.id
+      loadCatalog()
+    } catch { fallbackSaveCatalogItem(item) }
   } else { fallbackSaveCatalogItem(item) }
 }
 function fallbackSaveCatalogItem(item) {
@@ -952,6 +1234,172 @@ function trimGanttTasks(span) {
   return true
 }
 
+// --- Finanzas: proyectos / ingresos / egresos ---
+
+function loadProyectos() {
+  if (state.dbConnected) {
+    pb.getProyectos().then(items => { state.proyectos = items.slice().sort((a, b) => (b.startDate || '').localeCompare(a.startDate || '')) }).catch(() => {
+      state.proyectos = JSON.parse(localStorage.getItem('presto_proyectos') || '[]')
+    })
+  } else {
+    state.proyectos = JSON.parse(localStorage.getItem('presto_proyectos') || '[]')
+  }
+}
+async function saveProyecto(proyecto) {
+  const prev = state.proyectos.find(p => p.id === proyecto.id)
+  const data = withTrace(proyecto, prev)
+  if (state.dbConnected) {
+    try {
+      const saved = await pb.saveProyecto(data)
+      if (saved && saved.id && saved.id !== data.id) data.id = saved.id
+      loadProyectos()
+    } catch { fallbackSaveProyecto(data) }
+  } else { fallbackSaveProyecto(data) }
+}
+function fallbackSaveProyecto(proyecto) {
+  const list = JSON.parse(localStorage.getItem('presto_proyectos') || '[]')
+  const idx = list.findIndex(p => p.id === proyecto.id)
+  if (idx >= 0) { list[idx] = proyecto } else { list.push(proyecto) }
+  localStorage.setItem('presto_proyectos', JSON.stringify(list))
+  loadProyectos()
+  toast('Proyecto guardado ✓')
+}
+function deleteProyecto(id) {
+  if (state.dbConnected) {
+    pb.deleteProyecto(id).catch(() => fallbackDeleteProyecto(id))
+  } else { fallbackDeleteProyecto(id) }
+}
+function fallbackDeleteProyecto(id) {
+  const list = JSON.parse(localStorage.getItem('presto_proyectos') || '[]')
+  localStorage.setItem('presto_proyectos', JSON.stringify(list.filter(p => p.id !== id)))
+  loadProyectos()
+  toast('Proyecto eliminado ✓')
+}
+
+function loadIngresos() {
+  if (state.dbConnected) {
+    pb.getIngresos().then(items => { state.ingresos = items.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')) }).catch(() => {
+      state.ingresos = JSON.parse(localStorage.getItem('presto_ingresos') || '[]')
+    })
+  } else {
+    state.ingresos = JSON.parse(localStorage.getItem('presto_ingresos') || '[]')
+  }
+}
+async function saveIngreso(ingreso) {
+  if (state.dbConnected) {
+    try {
+      const saved = await pb.saveIngreso(ingreso)
+      if (saved && saved.id && saved.id !== ingreso.id) ingreso.id = saved.id
+      loadIngresos()
+    } catch { fallbackSaveIngreso(ingreso) }
+  } else { fallbackSaveIngreso(ingreso) }
+}
+function fallbackSaveIngreso(ingreso) {
+  const list = JSON.parse(localStorage.getItem('presto_ingresos') || '[]')
+  const idx = list.findIndex(r => r.id === ingreso.id)
+  if (idx >= 0) { list[idx] = ingreso } else { list.push(ingreso) }
+  localStorage.setItem('presto_ingresos', JSON.stringify(list))
+  loadIngresos()
+  toast('Ingreso guardado ✓')
+}
+function deleteIngreso(id) {
+  if (state.dbConnected) {
+    pb.deleteIngreso(id).catch(() => fallbackDeleteIngreso(id))
+  } else { fallbackDeleteIngreso(id) }
+}
+function fallbackDeleteIngreso(id) {
+  const list = JSON.parse(localStorage.getItem('presto_ingresos') || '[]')
+  localStorage.setItem('presto_ingresos', JSON.stringify(list.filter(r => r.id !== id)))
+  loadIngresos()
+  toast('Ingreso eliminado ✓')
+}
+
+function loadEgresos() {
+  if (state.dbConnected) {
+    pb.getEgresos().then(items => { state.egresos = items.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')) }).catch(() => {
+      state.egresos = JSON.parse(localStorage.getItem('presto_egresos') || '[]')
+    })
+  } else {
+    state.egresos = JSON.parse(localStorage.getItem('presto_egresos') || '[]')
+  }
+}
+async function saveEgreso(egreso) {
+  if (state.dbConnected) {
+    try {
+      const saved = await pb.saveEgreso(egreso)
+      if (saved && saved.id && saved.id !== egreso.id) egreso.id = saved.id
+      loadEgresos()
+    } catch { fallbackSaveEgreso(egreso) }
+  } else { fallbackSaveEgreso(egreso) }
+}
+function fallbackSaveEgreso(egreso) {
+  const list = JSON.parse(localStorage.getItem('presto_egresos') || '[]')
+  const idx = list.findIndex(r => r.id === egreso.id)
+  if (idx >= 0) { list[idx] = egreso } else { list.push(egreso) }
+  localStorage.setItem('presto_egresos', JSON.stringify(list))
+  loadEgresos()
+  toast('Egreso guardado ✓')
+}
+function deleteEgreso(id) {
+  if (state.dbConnected) {
+    pb.deleteEgreso(id).catch(() => fallbackDeleteEgreso(id))
+  } else { fallbackDeleteEgreso(id) }
+}
+function fallbackDeleteEgreso(id) {
+  const list = JSON.parse(localStorage.getItem('presto_egresos') || '[]')
+  localStorage.setItem('presto_egresos', JSON.stringify(list.filter(r => r.id !== id)))
+  loadEgresos()
+  toast('Egreso eliminado ✓')
+}
+
+function crearProyectoDesdePropuesta(qn) {
+  const item = state.budgetList.find(x => x.quoteNumber === qn)
+  if (!item) return
+  const now = new Date().toISOString()
+  const user = who()
+  const proyecto = {
+    id: Date.now() + '',
+    nombre: (item.client && item.client !== '-' ? item.client + ' — ' : '') + item.quoteNumber,
+    quoteNumber: item.quoteNumber,
+    clientName: item.client === '-' ? '' : item.client,
+    status: 'activo',
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: '',
+    awardAmount: item.awardAmount || null,
+    currency: item.currency || '$',
+    responsable: '',
+    notes: '',
+    createdBy: user, createdAt: now, updatedBy: user, updatedAt: now,
+  }
+  saveProyecto(proyecto)
+  state.activeSection = 'proyectos'
+  toast('Proyecto creado desde ' + qn + ' ✓')
+}
+
+function proyectoStats(proyectoId) {
+  const recibido = sumByCurrency(state.ingresos.filter(r => r.proyectoId === proyectoId && r.estado === 'recibido'), 'monto')
+  const pagado = sumByCurrency(state.egresos.filter(r => r.proyectoId === proyectoId && r.estado === 'pagado'), 'monto')
+  return { recibido, pagado }
+}
+
+function exportIngresosExcel() {
+  if (!state.ingresos.length) { alert('No hay datos.'); return }
+  const data = [['Fecha', 'Proyecto', 'Concepto', 'Monto', 'Moneda', 'Estado', 'Método', 'Comprobante', 'Nota']]
+  state.ingresos.forEach(r => data.push([r.fecha || '', r.proyecto || '', r.concepto || '', Number(r.monto) || 0, r.moneda || '$', r.estado || '', r.metodo || '', r.comprobante || '', r.nota || '']))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Ingresos')
+  XLSX.writeFile(wb, 'Ingresos.xlsx')
+}
+
+function exportEgresosExcel() {
+  if (!state.egresos.length) { alert('No hay datos.'); return }
+  const data = [['Fecha', 'Proyecto', 'Categoría', 'Concepto', 'Monto', 'Moneda', 'Beneficiario', 'Estado', 'Comprobante', 'Nota']]
+  state.egresos.forEach(r => data.push([r.fecha || '', r.proyecto || '', r.categoria || '', r.concepto || '', Number(r.monto) || 0, r.moneda || '$', r.beneficiario || '', r.estado || '', r.comprobante || '', r.nota || '']))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), 'Egresos')
+  XLSX.writeFile(wb, 'Egresos.xlsx')
+}
+
 function exportCosteoExcel() {
   const wsData = [
     ['COSTEO INTERNO', state.quoteNumber],
@@ -985,8 +1433,10 @@ export function usePresupuesto() {
     computed: {
       proposalSubtotal, proposalTax, proposalTotal,
       costeoTotalCost, costeoTotalSale, costeoUtilidad, costeoMargen, selectedCount,
+      finKpis, aprobacionInfo,
     },
     fmt,
+    fmtMoney, fmtMulti,
     addProposalItem, removeProposalItem,
     recalcSales, addCosteoCategory, removeCosteoCategory, addCosteoItem, removeCosteoItem,
     addCosteoGroup, removeCosteoGroup, addItemToGroup, removeItemFromGroup, findItemByKey, groupTotal,
@@ -994,6 +1444,11 @@ export function usePresupuesto() {
     addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
     saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient, loadCatalog, saveCatalogItem, deleteCatalogItem,
-    exportCosteoExcel, exportHistorialExcel, toast, dbLogin, resetBudget, generateQuoteNumber,
+    aprobarPropuesta, enviarARevision, solicitarCambios, enviarACliente, rectificarPropuesta, reenviarACliente, adjudicarPropuesta, rechazarPropuesta,
+    loadProyectos, saveProyecto, deleteProyecto,
+    loadIngresos, saveIngreso, deleteIngreso,
+    loadEgresos, saveEgreso, deleteEgreso,
+    crearProyectoDesdePropuesta, proyectoStats,
+    exportCosteoExcel, exportHistorialExcel, exportIngresosExcel, exportEgresosExcel, toast, dbLogin, resetBudget, generateQuoteNumber,
   }
 }

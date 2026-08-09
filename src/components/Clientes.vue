@@ -6,12 +6,12 @@ const { state, saveClient, deleteClient } = usePresupuesto()
 const editingId = ref(null)
 const form = ref({ name: '', company: '', email: '', phone: '', address: '', notes: '' })
 
-function openAdd() { editingId.value = null; form.value = { name: '', company: '', email: '', phone: '', address: '', notes: '' } }
+function openAdd() { editingId.value = '__new__'; form.value = { name: '', company: '', email: '', phone: '', address: '', notes: '' } }
 function openEdit(c) { editingId.value = c.id; form.value = { ...c } }
 function cancelForm() { editingId.value = null }
 function submitForm() {
   if (!form.value.name) return
-  saveClient({ ...form.value, id: editingId.value || Date.now() + '' })
+  saveClient({ ...form.value, id: editingId.value === '__new__' ? Date.now() + '' : editingId.value })
   editingId.value = null
 }
 function confirmDelete(id) {

@@ -71,15 +71,16 @@ export async function registerUser(email, password, name) {
 // --- Clients ---
 
 export async function getClients() {
-  const data = await api('GET', '/api/collections/clients/records?sort=-created')
+  const data = await api('GET', '/api/collections/clients/records?perPage=500')
   return data.items
 }
 
 export async function saveClient(client) {
-  if (client.id && client.id.length > 10) {
+  if (client.id && client.id.length === 15) {
     return await api('PATCH', '/api/collections/clients/records/' + client.id, client)
   }
-  const created = await api('POST', '/api/collections/clients/records', client)
+  const body = { ...client }; delete body.id
+  const created = await api('POST', '/api/collections/clients/records', body)
   return { ...client, id: created.id }
 }
 
@@ -90,15 +91,16 @@ export async function deleteClient(id) {
 // --- Catalog ---
 
 export async function getCatalog() {
-  const data = await api('GET', '/api/collections/catalog/records?sort=-created')
+  const data = await api('GET', '/api/collections/catalog/records?perPage=500')
   return data.items
 }
 
 export async function saveCatalogItem(item) {
-  if (item.id && item.id.length > 10) {
+  if (item.id && item.id.length === 15) {
     return await api('PATCH', '/api/collections/catalog/records/' + item.id, item)
   }
-  const created = await api('POST', '/api/collections/catalog/records', item)
+  const body = { ...item }; delete body.id
+  const created = await api('POST', '/api/collections/catalog/records', body)
   return { ...item, id: created.id }
 }
 
@@ -109,15 +111,23 @@ export async function deleteCatalogItem(id) {
 // --- Quotes ---
 
 export async function getQuotes() {
-  const data = await api('GET', '/api/collections/quotes/records?sort=-created&perPage=200')
+  const data = await api('GET', '/api/collections/quotes/records?perPage=500')
   return data.items
 }
 
 export async function saveQuote(quote) {
-  if (quote.id && quote.id.length > 10) {
+  if (quote.id && quote.id.length === 15) {
     return await api('PATCH', '/api/collections/quotes/records/' + quote.id, quote)
   }
-  const created = await api('POST', '/api/collections/quotes/records', quote)
+  const existing = await getQuoteByNum(quote.quoteNumber).catch(() => null)
+  if (existing) {
+    const body = { ...quote }
+    delete body.id
+    return await api('PATCH', '/api/collections/quotes/records/' + existing.id, body)
+  }
+  const body = { ...quote }
+  delete body.id
+  const created = await api('POST', '/api/collections/quotes/records', body)
   return { ...quote, id: created.id }
 }
 
@@ -133,4 +143,64 @@ export async function getQuoteByNum(quoteNumber) {
 export async function deleteQuoteByNum(quoteNumber) {
   const data = await api('GET', '/api/collections/quotes/records?filter=(quoteNumber%3D%22' + encodeURIComponent(quoteNumber) + '%22)')
   if (data.items.length) await api('DELETE', '/api/collections/quotes/records/' + data.items[0].id)
+}
+
+// --- Proyectos ---
+
+export async function getProyectos() {
+  const data = await api('GET', '/api/collections/proyectos/records?perPage=500')
+  return data.items
+}
+
+export async function saveProyecto(record) {
+  if (record.id && record.id.length === 15) {
+    return await api('PATCH', '/api/collections/proyectos/records/' + record.id, record)
+  }
+  const body = { ...record }; delete body.id
+  const created = await api('POST', '/api/collections/proyectos/records', body)
+  return { ...record, id: created.id }
+}
+
+export async function deleteProyecto(id) {
+  await api('DELETE', '/api/collections/proyectos/records/' + id)
+}
+
+// --- Ingresos ---
+
+export async function getIngresos() {
+  const data = await api('GET', '/api/collections/ingresos/records?perPage=1000')
+  return data.items
+}
+
+export async function saveIngreso(record) {
+  if (record.id && record.id.length === 15) {
+    return await api('PATCH', '/api/collections/ingresos/records/' + record.id, record)
+  }
+  const body = { ...record }; delete body.id
+  const created = await api('POST', '/api/collections/ingresos/records', body)
+  return { ...record, id: created.id }
+}
+
+export async function deleteIngreso(id) {
+  await api('DELETE', '/api/collections/ingresos/records/' + id)
+}
+
+// --- Egresos ---
+
+export async function getEgresos() {
+  const data = await api('GET', '/api/collections/egresos/records?perPage=1000')
+  return data.items
+}
+
+export async function saveEgreso(record) {
+  if (record.id && record.id.length === 15) {
+    return await api('PATCH', '/api/collections/egresos/records/' + record.id, record)
+  }
+  const body = { ...record }; delete body.id
+  const created = await api('POST', '/api/collections/egresos/records', body)
+  return { ...record, id: created.id }
+}
+
+export async function deleteEgreso(id) {
+  await api('DELETE', '/api/collections/egresos/records/' + id)
 }

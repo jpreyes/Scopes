@@ -141,8 +141,9 @@ const newGroupName = ref('')
       <button @click="addCosteoCategory()" class="w-full px-3 py-2 text-xs text-text-muted border border-dashed border-border rounded-xl hover:bg-surface/50 transition cursor-pointer">+ Agregar categoría</button>
     </div>
 
-    <!-- RIGHT: groups panel -->
-    <div class="md:w-[340px] w-full shrink-0 space-y-3 md:border-l md:border-border md:pl-5 pt-4 md:pt-0 border-t md:border-t-0 border-border">
+    <!-- RIGHT: groups panel (sticky, follows scroll) -->
+    <div class="md:w-[340px] w-full shrink-0 space-y-3 md:border-l md:border-border md:pl-5 pt-4 md:pt-0 border-t md:border-t-0 border-border
+      md:sticky md:top-[4.5rem] md:self-start md:max-h-[calc(100vh-5.5rem)] md:overflow-y-auto md:pb-4">
 
         <div class="flex items-center gap-2">
           <input v-model="newGroupName" @keyup.enter="addCosteoGroup(newGroupName); newGroupName = ''"

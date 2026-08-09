@@ -11,6 +11,9 @@ import HistorialTab from './components/HistorialTab.vue'
 import Dashboard from './components/Dashboard.vue'
 import Clientes from './components/Clientes.vue'
 import Catalogo from './components/Catalogo.vue'
+import ProyectosTab from './components/ProyectosTab.vue'
+import IngresosTab from './components/IngresosTab.vue'
+import EgresosTab from './components/EgresosTab.vue'
 import PrintGantt from './components/PrintGantt.vue'
 import ConfigTab from './components/ConfigTab.vue'
 import LoginPage from './components/LoginPage.vue'
@@ -22,7 +25,7 @@ const icons = {
   historial: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
 }
 
-const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog, resetBudget, generateQuoteNumber } = usePresupuesto()
+const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog, loadProyectos, loadIngresos, loadEgresos, resetBudget, generateQuoteNumber } = usePresupuesto()
 
 function onAuth(user) {
   state.user = user
@@ -49,7 +52,10 @@ onMounted(() => {
   loadDashboardData()
   loadClients()
   loadCatalog()
-  dbLogin().then(() => { loadHistorial(); loadDashboardData(); loadClients(); loadCatalog() })
+  loadProyectos()
+  loadIngresos()
+  loadEgresos()
+  dbLogin().then(() => { loadHistorial(); loadDashboardData(); loadClients(); loadCatalog(); loadProyectos(); loadIngresos(); loadEgresos() })
 })
 </script>
 
@@ -76,7 +82,7 @@ onMounted(() => {
         </div>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <button @click="state.activeSection = 'propuestas'; resetBudget()"
+        <button @click="state.activeSection = 'propuestas'; state.activeTab = 'propuesta'; resetBudget()"
           class="px-3 py-1.5 text-xs font-semibold bg-primary hover:bg-primary-hover text-white rounded-lg transition cursor-pointer shrink-0 flex items-center gap-1.5">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nueva
@@ -95,8 +101,12 @@ onMounted(() => {
         <Sidebar />
 
         <div class="flex-1 min-w-0">
-          <!-- TABS (solo para sección propuestas) -->
-          <div v-if="state.activeSection === 'propuestas'" class="flex overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print">
+          <!-- TABS (solo para sección propuestas, fuera de la lista) -->
+          <div v-if="state.activeSection === 'propuestas' && state.activeTab !== 'historial'" class="flex overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print items-stretch">
+            <button @click="state.activeTab = 'historial'"
+              class="flex items-center gap-1.5 pr-4 mr-2 my-2 text-xs font-semibold text-text-muted border-r border-border hover:text-primary transition cursor-pointer shrink-0">
+              <span>←</span> Lista
+            </button>
             <button v-for="t in state.tabs" :key="t.id"
               class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer shrink-0"
               :class="state.activeTab === t.id ? 'text-primary border-primary bg-surface' : 'text-text-muted border-transparent hover:text-text hover:border-border'"
@@ -108,12 +118,12 @@ onMounted(() => {
 
           <!-- CONTENT -->
           <div class="p-3 sm:p-6 no-print">
-            <!-- Propuestas sub-tabs -->
+            <!-- Propuestas: lista o formulario -->
             <template v-if="state.activeSection === 'propuestas'">
-              <PropuestaTab v-if="state.activeTab === 'propuesta'" />
+              <HistorialTab v-if="state.activeTab === 'historial'" />
+              <PropuestaTab v-else-if="state.activeTab === 'propuesta'" />
               <GanttTab v-else-if="state.activeTab === 'gantt'" />
               <CosteoInterno v-else-if="state.activeTab === 'costeo'" />
-              <HistorialTab v-else-if="state.activeTab === 'historial'" />
             </template>
 
             <!-- Dashboard -->
@@ -125,8 +135,14 @@ onMounted(() => {
             <!-- Catálogo -->
             <Catalogo v-else-if="state.activeSection === 'catalogo'" />
 
-            <!-- Historial -->
-            <HistorialTab v-else-if="state.activeSection === 'historial'" />
+            <!-- Proyectos -->
+            <ProyectosTab v-else-if="state.activeSection === 'proyectos'" />
+
+            <!-- Ingresos -->
+            <IngresosTab v-else-if="state.activeSection === 'ingresos'" />
+
+            <!-- Egresos -->
+            <EgresosTab v-else-if="state.activeSection === 'egresos'" />
 
             <!-- Configuración -->
             <ConfigTab v-else-if="state.activeSection === 'config'" />

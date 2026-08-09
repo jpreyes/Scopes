@@ -3,7 +3,25 @@ import { usePresupuesto } from '../stores/presupuesto.js'
 import RichTextEditor from './RichTextEditor.vue'
 import { computed, nextTick } from 'vue'
 
-const { state, fmt, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections, saveBudget, loadBudget } = usePresupuesto()
+const { state, fmt, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections, saveBudget, loadBudget, aprobarPropuesta, enviarARevision, solicitarCambios, enviarACliente, rectificarPropuesta, reenviarACliente, adjudicarPropuesta, rechazarPropuesta, crearProyectoDesdePropuesta } = usePresupuesto()
+
+function onStatusChange(e) {
+  const nuevo = e.target.value
+  if (nuevo === 'enviada' && !storeComputed.aprobacionInfo.value.listaParaEnviar) {
+    alert('Esta propuesta requiere al menos 2 aprobaciones internas de administradores distintos antes de marcarla como Enviada.')
+    e.target.value = state.proposalStatus
+    return
+  }
+  state.proposalStatus = nuevo
+}
+
+function fmtAprobacion(iso) {
+  const d = new Date(iso)
+  if (isNaN(d)) return ''
+  return d.toLocaleDateString('es-CL') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+}
+
+const soyElCreador = () => state.createdBy && state.user && (state.user.name || state.user.email) === state.createdBy
 
 function handlePrint() {
   state.activeTab = 'propuesta'
@@ -15,11 +33,13 @@ const PHASE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#e
 
 const STATUS_OPTS = [
   { value: 'borrador', label: 'Borrador', color: 'bg-gray-400' },
-  { value: 'enviada', label: 'Enviada', color: 'bg-blue-500' },
-  { value: 'revision', label: 'En Revisión', color: 'bg-amber-500' },
+  { value: 'en_revision', label: 'En Revisión', color: 'bg-amber-500' },
+  { value: 'modificacion', label: 'Requiere cambios', color: 'bg-orange-500' },
   { value: 'aprobada', label: 'Aprobada', color: 'bg-emerald-500' },
-  { value: 'rechazada', label: 'Rechazada', color: 'bg-red-500' },
+  { value: 'enviada', label: 'Enviada', color: 'bg-blue-500' },
+  { value: 'rectificacion', label: 'Rectificación', color: 'bg-violet-500' },
   { value: 'adjudicada', label: 'Adjudicada', color: 'bg-primary' },
+  { value: 'rechazada', label: 'Rechazada', color: 'bg-red-500' },
 ]
 
 function calcGanttHeaders(span, unit) {
@@ -102,14 +122,46 @@ function ganttBarStyle(t) {
     </div>
 
     <!-- Status bar -->
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 mb-5 bg-surface border border-border/80 rounded-xl shadow-sm">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 mb-3 bg-surface border border-border/80 rounded-xl shadow-sm">
       <div class="flex items-center gap-2 text-xs">
         <span class="font-semibold text-text-muted uppercase">Estado:</span>
-        <select v-model="state.proposalStatus" class="border border-border rounded-lg px-2 py-1 text-xs bg-surface outline-none focus:border-primary">
+        <select :value="state.proposalStatus" @change="onStatusChange" class="border border-border rounded-lg px-2 py-1 text-xs bg-surface outline-none focus:border-primary">
           <option v-for="opt in STATUS_OPTS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
         <span class="w-2 h-2 rounded-full" :class="(STATUS_OPTS.find(o => o.value === state.proposalStatus) || {}).color"></span>
       </div>
+      <!-- Aprobación interna (solo en revisión) -->
+      <template v-if="state.proposalStatus === 'en_revision'">
+        <div class="flex items-center gap-2 text-xs flex-wrap">
+          <span class="font-semibold text-text-muted uppercase">Aprobación interna:</span>
+          <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border"
+            :class="storeComputed.aprobacionInfo.value.listaParaEnviar ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-amber-100 border-amber-200 text-amber-700'">
+            {{ storeComputed.aprobacionInfo.value.count }}/2
+          </span>
+          <span v-for="a in storeComputed.aprobacionInfo.value.lista" :key="a.by + a.at" class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-surface border border-border text-text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {{ a.by }}<span class="text-text-dim">· {{ fmtAprobacion(a.at) }}</span>
+          </span>
+          <button v-if="!storeComputed.aprobacionInfo.value.listaParaEnviar && !soyElCreador()" @click="aprobarPropuesta"
+            class="px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition cursor-pointer">
+            Aprobar
+          </button>
+          <span v-else-if="!storeComputed.aprobacionInfo.value.listaParaEnviar && soyElCreador()" class="text-[10px] text-text-dim">
+            El creador no puede aprobar su propia propuesta
+          </span>
+          <span v-else class="text-[10px] font-bold text-emerald-700">Lista para enviar ✓</span>
+        </div>
+      </template>
+      <template v-else-if="state.proposalStatus === 'modificacion'">
+        <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 border border-orange-200 text-orange-700">
+          Los revisores solicitaron cambios
+        </span>
+      </template>
+      <template v-else-if="state.proposalStatus === 'rectificacion'">
+        <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 border border-violet-200 text-violet-700">
+          El cliente solicitó una rectificación
+        </span>
+      </template>
       <template v-if="state.proposalStatus === 'adjudicada'">
         <div class="flex items-center gap-2 text-xs">
           <span class="font-semibold text-text-muted uppercase">Monto:</span>
@@ -120,6 +172,41 @@ function ganttBarStyle(t) {
         <span class="font-semibold text-text-muted uppercase shrink-0">Notas:</span>
         <input type="text" v-model="state.projectNotes" placeholder="Notas del proyecto…" class="flex-1 min-w-0 px-2 py-1 border border-border rounded text-xs bg-surface outline-none focus:border-primary" />
       </div>
+    </div>
+
+    <!-- Acciones por estado -->
+    <div class="flex flex-wrap items-center gap-2 px-4 py-2.5 mb-5 bg-bg-app/60 border border-border rounded-xl">
+      <template v-if="state.proposalStatus === 'borrador'">
+        <button @click="enviarARevision" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition cursor-pointer">→ Enviar a revisión interna</button>
+      </template>
+      <template v-else-if="state.proposalStatus === 'en_revision'">
+        <button v-if="!soyElCreador()" @click="solicitarCambios" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition cursor-pointer">Solicitar cambios</button>
+        <span v-else class="text-[11px] text-text-dim">Esperando aprobación de 2 administradores</span>
+      </template>
+      <template v-else-if="state.proposalStatus === 'modificacion'">
+        <span class="text-[11px] text-text-muted">Corrige la propuesta y vuelve a enviarla a revisión:</span>
+        <button @click="enviarARevision" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition cursor-pointer">✓ Corregido — enviar a revisión</button>
+      </template>
+      <template v-else-if="state.proposalStatus === 'aprobada'">
+        <span class="text-[11px] font-semibold text-emerald-700">Aprobada internamente ✓</span>
+        <button @click="enviarACliente" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition cursor-pointer">✉ Enviar a cliente</button>
+        <button @click="handlePrint" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer">Descargar PDF</button>
+      </template>
+      <template v-else-if="state.proposalStatus === 'enviada'">
+        <button @click="rectificarPropuesta" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-violet-500 text-white hover:bg-violet-600 transition cursor-pointer">Rectificación del cliente</button>
+        <button @click="adjudicarPropuesta" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition cursor-pointer">Adjudicada</button>
+        <button @click="rechazarPropuesta" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600 transition cursor-pointer">Rechazar</button>
+      </template>
+      <template v-else-if="state.proposalStatus === 'rectificacion'">
+        <button @click="reenviarACliente" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition cursor-pointer">Reenviar a cliente</button>
+        <button @click="enviarARevision" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition cursor-pointer">Enviar a revisión interna</button>
+      </template>
+      <template v-else-if="state.proposalStatus === 'adjudicada'">
+        <button @click="crearProyectoDesdePropuesta(state.quoteNumber)" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition cursor-pointer">→ Crear proyecto</button>
+      </template>
+      <template v-else-if="state.proposalStatus === 'rechazada'">
+        <span class="text-[11px] text-text-dim">Propuesta desestimada</span>
+      </template>
     </div>
 
     <!-- Company / Client -->

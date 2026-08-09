@@ -14,8 +14,8 @@ const d = state.dashboardData
       </button>
     </div>
 
-    <!-- Finanzas KPI -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <!-- Finanzas KPI (confidencial: solo admins) -->
+    <div v-if="computed.isAdmin.value" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
         <p class="text-[10px] text-emerald-700 uppercase font-semibold tracking-wider">Ingresos recibidos</p>
         <p class="text-sm sm:text-base font-bold text-emerald-700 mt-1 break-words">{{ fmtMulti(computed.finKpis.value.recibido) }}</p>

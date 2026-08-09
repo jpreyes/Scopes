@@ -1,0 +1,31 @@
+# Frontend de Scopes. PocketBase vive en el stack `pocketbase`
+# (servicio `scopes` / contenedor pb-scopes) y se alcanza por la red scopesnet.
+#
+#   docker compose -f deploy/docker-compose.yml build
+#   docker compose -f deploy/docker-compose.yml up -d
+#
+# Publicado en https://scopes.jpreyes.cl vía Cloudflare Tunnel → localhost:8092.
+name: scopes
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        VITE_PB_URL: "https://scopes.jpreyes.cl"
+    image: scopes/web:latest
+    container_name: scopes-web
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    cpus: "0.5"
+    ports:
+      - "127.0.0.1:8092:80"
+    networks:
+      - scopesnet
+
+networks:
+  scopesnet:
+    external: true

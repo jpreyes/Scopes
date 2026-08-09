@@ -11,7 +11,9 @@ migrate((app) => {
   }
 
   // Seed default user: admin@scopes.cl / admin123
-  const existing = app.findCollectionByNameOrId('users')
+  // Solo para desarrollo — en producción NUNCA (credencial pública conocida).
+  // Activar con SCOPES_SEED_DEMO=1 en el entorno de PocketBase.
+  const existing = $os.getenv('SCOPES_SEED_DEMO') === '1' ? app.findCollectionByNameOrId('users') : null
   if (existing) {
     const records = app.findRecordsByFilter('users', 'email = "admin@scopes.cl"')
     if (!records.length) {

@@ -154,18 +154,22 @@ const state = reactive({
   toast: '',
 })
 
+// Conecta con PocketBase usando el token del USUARIO logueado (las reglas de
+// todas las colecciones son `@request.auth.id != ""`). Sin sesión de usuario no
+// hay conexión y la app queda en modo localStorage.
 async function dbLogin() {
-  const saved = sessionStorage.getItem('pb_token')
-  if (saved) { state.dbConnected = pb.restoreToken(); dedupeQuotes(); migrarEstadosViejos(); return }
+  if (!pb.restoreUserToken()) { state.dbConnected = false; return }
   try {
-    const email = import.meta.env.VITE_PB_EMAIL || 'admin@scopes.cl'
-    const password = import.meta.env.VITE_PB_PASSWORD || 'admin123'
-    await pb.login(email, password)
+    state.user = await pb.refreshUser()
     state.dbConnected = true
     migrateLocalToPB()
     dedupeQuotes()
     migrarEstadosViejos()
-  } catch { state.dbConnected = false }
+  } catch {
+    pb.logoutUser()
+    state.user = null
+    state.dbConnected = false
+  }
 }
 
 async function migrarEstadosViejos() {
@@ -312,6 +316,8 @@ function fmtMulti(map) {
   if (!entries.length) return '$ 0'
   return entries.map(([cur, v]) => fmtAmount(v, cur)).join('  ·  ')
 }
+
+const isAdmin = computed(() => state.user?.role === 'admin')
 
 const finKpis = computed(() => {
   const recibido = sumByCurrency(state.ingresos.filter(r => r.estado === 'recibido'), 'monto')
@@ -1433,7 +1439,7 @@ export function usePresupuesto() {
     computed: {
       proposalSubtotal, proposalTax, proposalTotal,
       costeoTotalCost, costeoTotalSale, costeoUtilidad, costeoMargen, selectedCount,
-      finKpis, aprobacionInfo,
+      finKpis, aprobacionInfo, isAdmin,
     },
     fmt,
     fmtMoney, fmtMulti,

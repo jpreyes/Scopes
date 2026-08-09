@@ -18,6 +18,23 @@ Generador de ofertas técnico-económicas con cotización, costeo interno confid
 | `npm run build` | Build producción a `dist/` |
 | `npm run preview` | Preview build `http://localhost:4173/` |
 
+## Producción
+
+Desplegado en **https://scopes.jpreyes.cl** (VPS `srv1134838.hstgr.cloud`, vía Cloudflare Tunnel).
+
+```
+docker compose -f deploy/docker-compose.yml build && docker compose -f deploy/docker-compose.yml up -d
+```
+
+nginx sirve la SPA en `127.0.0.1:8092` y hace de proxy de `/api/` y `/_/` hacia el contenedor `pb-scopes`
+(stack `pocketbase`, `127.0.0.1:8091`). Detalles en `deploy/` y en `AGENTS.md`.
+
+## Acceso y roles
+
+- **No hay registro público.** Las cuentas las crea un administrador desde la sección **Usuarios**.
+- `role` = `admin` o `user`. Solo los admins ven Ingresos, Egresos, Usuarios, el tab **Costeo Interno**
+  y las KPI financieras del Dashboard.
+
 ## Funcionalidades
 
 - **Propuesta** con secciones de texto enriquecido (presentación, servicio, objetivo, alcance, ventajas), tabla de precios, totales con IVA, firmas

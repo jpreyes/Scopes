@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, nextTick } from 'vue'
+import { onMounted, nextTick, computed as vueComputed } from 'vue'
 import { usePresupuesto } from './stores/presupuesto.js'
 import * as pb from './stores/pocketbase.js'
 import CoverPage from './components/CoverPage.vue'
@@ -17,6 +17,7 @@ import EgresosTab from './components/EgresosTab.vue'
 import PrintGantt from './components/PrintGantt.vue'
 import ConfigTab from './components/ConfigTab.vue'
 import LoginPage from './components/LoginPage.vue'
+import Usuarios from './components/Usuarios.vue'
 
 const icons = {
   propuesta: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
@@ -27,13 +28,30 @@ const icons = {
 
 const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog, loadProyectos, loadIngresos, loadEgresos, resetBudget, generateQuoteNumber } = usePresupuesto()
 
+// El Costeo Interno es confidencial: solo admins.
+const visibleTabs = vueComputed(() =>
+  state.tabs.filter(t => t.id !== 'costeo' || computed.isAdmin.value)
+)
+
+function loadAll() {
+  loadHistorial()
+  loadDashboardData()
+  loadClients()
+  loadCatalog()
+  loadProyectos()
+  loadIngresos()
+  loadEgresos()
+}
+
 function onAuth(user) {
   state.user = user
+  dbLogin().then(loadAll)
 }
 
 function handleLogout() {
   pb.logoutUser()
   state.user = null
+  state.dbConnected = false
 }
 
 onMounted(() => {
@@ -48,14 +66,8 @@ onMounted(() => {
   state.propuestaSections.forEach(s => { if (state.printSections[s.id] === undefined) state.printSections[s.id] = true })
   if (state.printSections.economica === undefined) state.printSections.economica = true
   if (state.printSections.gantt === undefined) state.printSections.gantt = true
-  loadHistorial()
-  loadDashboardData()
-  loadClients()
-  loadCatalog()
-  loadProyectos()
-  loadIngresos()
-  loadEgresos()
-  dbLogin().then(() => { loadHistorial(); loadDashboardData(); loadClients(); loadCatalog(); loadProyectos(); loadIngresos(); loadEgresos() })
+  loadAll()
+  if (state.user) dbLogin().then(loadAll)
 })
 </script>
 
@@ -107,7 +119,7 @@ onMounted(() => {
               class="flex items-center gap-1.5 pr-4 mr-2 my-2 text-xs font-semibold text-text-muted border-r border-border hover:text-primary transition cursor-pointer shrink-0">
               <span>←</span> Lista
             </button>
-            <button v-for="t in state.tabs" :key="t.id"
+            <button v-for="t in visibleTabs" :key="t.id"
               class="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer shrink-0"
               :class="state.activeTab === t.id ? 'text-primary border-primary bg-surface' : 'text-text-muted border-transparent hover:text-text hover:border-border'"
               @click="state.activeTab = t.id">
@@ -123,7 +135,7 @@ onMounted(() => {
               <HistorialTab v-if="state.activeTab === 'historial'" />
               <PropuestaTab v-else-if="state.activeTab === 'propuesta'" />
               <GanttTab v-else-if="state.activeTab === 'gantt'" />
-              <CosteoInterno v-else-if="state.activeTab === 'costeo'" />
+              <CosteoInterno v-else-if="state.activeTab === 'costeo' && computed.isAdmin.value" />
             </template>
 
             <!-- Dashboard -->
@@ -139,10 +151,13 @@ onMounted(() => {
             <ProyectosTab v-else-if="state.activeSection === 'proyectos'" />
 
             <!-- Ingresos -->
-            <IngresosTab v-else-if="state.activeSection === 'ingresos'" />
+            <IngresosTab v-else-if="state.activeSection === 'ingresos' && computed.isAdmin.value" />
 
             <!-- Egresos -->
-            <EgresosTab v-else-if="state.activeSection === 'egresos'" />
+            <EgresosTab v-else-if="state.activeSection === 'egresos' && computed.isAdmin.value" />
+
+            <!-- Usuarios (solo admin) -->
+            <Usuarios v-else-if="state.activeSection === 'usuarios' && computed.isAdmin.value" />
 
             <!-- Configuración -->
             <ConfigTab v-else-if="state.activeSection === 'config'" />

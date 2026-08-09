@@ -60,3 +60,6 @@ scopes-final.png
 dashboard-final.png
 costeo-*.md
 /src/assets/hero.png
+
+# Deploy secrets (nunca versionar)
+deploy/admins.env

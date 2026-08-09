@@ -5,10 +5,8 @@ import { usePresupuesto } from '../stores/presupuesto.js'
 
 const { state } = usePresupuesto()
 
-const isLogin = ref(true)
 const email = ref('')
 const password = ref('')
-const name = ref('')
 const error = ref('')
 const loading = ref(false)
 
@@ -18,16 +16,9 @@ async function submit() {
   error.value = ''
   loading.value = true
   try {
-    if (isLogin.value) {
-      const data = await pb.loginUser(email.value, password.value)
-      state.user = data.record
-      emit('auth', data.record)
-    } else {
-      await pb.registerUser(email.value, password.value, name.value)
-      const data = await pb.loginUser(email.value, password.value)
-      state.user = data.record
-      emit('auth', data.record)
-    }
+    const data = await pb.loginUser(email.value, password.value)
+    state.user = data.record
+    emit('auth', data.record)
   } catch (e) {
     error.value = e.message || 'Error de autenticación'
   } finally {
@@ -46,13 +37,6 @@ async function submit() {
       </div>
 
       <form @submit.prevent="submit" class="space-y-4">
-        <template v-if="!isLogin">
-          <label class="text-xs text-text-muted">
-            Nombre
-            <input type="text" v-model="name" required
-              class="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm outline-none focus:border-primary bg-bg-app text-text" />
-          </label>
-        </template>
         <label class="text-xs text-text-muted">
           Email
           <input type="email" v-model="email" required placeholder="correo@ejemplo.cl"
@@ -68,15 +52,12 @@ async function submit() {
 
         <button type="submit" :disabled="loading"
           class="w-full py-2.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer disabled:opacity-50">
-          {{ loading ? '…' : isLogin ? 'Iniciar sesión' : 'Crear cuenta' }}
+          {{ loading ? '…' : 'Iniciar sesión' }}
         </button>
       </form>
 
       <p class="text-center text-xs text-text-muted mt-5">
-        {{ isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?' }}
-        <button @click="isLogin = !isLogin; error = ''" class="text-primary font-semibold hover:underline cursor-pointer">
-          {{ isLogin ? 'Registrarse' : 'Iniciar sesión' }}
-        </button>
+        Las cuentas las crea un administrador desde la sección Usuarios.
       </p>
     </div>
   </div>

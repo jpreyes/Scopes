@@ -1,38 +1,19 @@
 const BASE = import.meta.env.VITE_PB_URL || 'http://localhost:8090'
 export function getBaseUrl() { return BASE }
 
-let token = null
 let userToken = null
 
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' }
-  const t = userToken || token
-  if (t) headers['Authorization'] = 'Bearer ' + t
+  if (userToken) headers['Authorization'] = 'Bearer ' + userToken
   const res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
   if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || res.statusText) }
   return res.json()
 }
 
-// --- Admin superuser auth (backend ops) ---
-
-export async function login(email, password) {
-  const data = await api('POST', '/api/collections/_superusers/auth-with-password', { identity: email, password })
-  token = data.token
-  sessionStorage.setItem('pb_token', token)
-  return data
-}
-
-export function restoreToken() {
-  token = sessionStorage.getItem('pb_token')
-  return !!token
-}
-
-export function clearToken() {
-  token = null
-  sessionStorage.removeItem('pb_token')
-}
-
 // --- Web user auth ---
+// Toda la app trabaja con el token del usuario logueado. NO existe login de
+// _superusers en el frontend: Vite hornea las env vars en el bundle público.
 
 export async function loginUser(email, password) {
   const data = await api('POST', '/api/collections/users/auth-with-password', { identity: email, password })
@@ -58,14 +39,33 @@ export function logoutUser() {
   sessionStorage.removeItem('pb_user')
 }
 
-export async function registerUser(email, password, name) {
-  const res = await fetch(BASE + '/api/collections/users/records', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, passwordConfirm: password, name }),
-  })
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || 'Error al registrar') }
-  return res.json()
+// Revalida el token guardado y devuelve el record fresco (trae `role` al día).
+export async function refreshUser() {
+  const data = await api('POST', '/api/collections/users/auth-refresh')
+  userToken = data.token
+  sessionStorage.setItem('pb_user_token', data.token)
+  sessionStorage.setItem('pb_user', JSON.stringify(data.record))
+  return data.record
+}
+
+// --- Users (gestión, solo admins por reglas de la colección) ---
+
+export async function getUsers() {
+  const data = await api('GET', '/api/collections/users/records?perPage=500')
+  return data.items
+}
+
+export async function saveUser(user) {
+  if (user.id && user.id.length === 15) {
+    return await api('PATCH', '/api/collections/users/records/' + user.id, user)
+  }
+  const body = { ...user }; delete body.id
+  const created = await api('POST', '/api/collections/users/records', body)
+  return { ...user, id: created.id }
+}
+
+export async function deleteUser(id) {
+  await api('DELETE', '/api/collections/users/records/' + id)
 }
 
 // --- Clients ---

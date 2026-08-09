@@ -29,10 +29,23 @@
 
 ## Auth Flow
 - On load: `restoreUserToken()` checks `sessionStorage('pb_user_token')`. If valid, show app. If not, show `<LoginPage />`.
-- Login: `pb.loginUser(email, password)` → `POST /api/collections/users/auth-with-password`. Token + user stored in sessionStorage.
-- Register: `pb.registerUser(email, password, name)` → `POST /api/collections/users/records` (public createRule). Then auto-login.
-- Logout: `pb.logoutUser()` clears sessionStorage, sets `state.user = null`, shows login page.
-- Admin auth (`pb.login()`) runs silently in background for PocketBase CRUD operations (via `_superusers`).
+- Login: `pb.loginUser(email, password)` → `POST /api/collections/users/auth-with-password`. Token + user stored in sessionStorage. `App.vue` then runs `dbLogin().then(loadAll)`.
+- **No hay registro público.** Las cuentas las crea un admin desde la sección Usuarios (`users.createRule = '@request.auth.role = "admin"'`).
+- Logout: `pb.logoutUser()` clears sessionStorage, sets `state.user = null` y `dbConnected = false`.
+- **NUNCA volver a autenticar `_superusers` desde el frontend.** Vite hornea las env vars en el bundle público: `VITE_PB_EMAIL`/`VITE_PB_PASSWORD` exponían la base entera a cualquiera que abriera la web. `dbLogin()` usa el token del usuario logueado (`pb.refreshUser()` → `auth-refresh`) y todas las colecciones tienen reglas `@request.auth.id != ""`.
+
+## Roles
+- `users.role` = `'admin' | 'user'` (migración `1789000000_users_role_cargo.js`, junto con `cargo`).
+- `computed.isAdmin` en el store. Solo admins ven: Ingresos, Egresos, Usuarios y el tab **Costeo Interno**; las KPI financieras del Dashboard también quedan ocultas.
+- `updateRule` de `users` impide auto-promoverse: `(@request.auth.id = id && @request.body.role:isset = false) || @request.auth.role = "admin"`.
+- El gating de la UI es cosmético; la barrera real son las reglas de las colecciones.
+
+## Despliegue
+- `deploy/` — build multi-stage (node → nginx) + `docker-compose.yml` (proyecto `scopes`, `127.0.0.1:8092`). nginx sirve la SPA y hace de proxy de `/api/` y `/_/` hacia `pb-scopes:8090` por la red docker `scopesnet`, así que todo va al mismo origen y no hay CORS.
+- PocketBase de producción: stack `pocketbase` del VPS, servicio `scopes` (`127.0.0.1:8091`), datos en `/root/pocketbase/scopes/pb_data`, migraciones montadas desde este repo.
+- Público en `https://scopes.jpreyes.cl` vía Cloudflare Tunnel.
+- `deploy/seed-admins.sh` + `deploy/admins.env` (gitignored) crean/reaseguran las cuentas admin.
+- El seed demo `admin@scopes.cl/admin123` solo corre con `SCOPES_SEED_DEMO=1`.
 
 ## Data Layer
 - **PocketBase-first** with localStorage fallback for all CRUD (clients, catalog, quotes, proyectos, ingresos, egresos).

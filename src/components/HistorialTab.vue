@@ -22,6 +22,25 @@ function fmtStamp(iso) {
   return `${dd}/${mm} ${hh}:${mi}`
 }
 
+// --- Aprobación interna (2 administradores distintos, nunca el creador) ---
+
+const yo = () => (state.user && (state.user.name || state.user.email)) || ''
+
+function aprobadores(b) {
+  return new Set((b.aprobaciones || []).map(a => a.by))
+}
+function requiereAprobacion(b) {
+  return b.status === 'en_revision'
+}
+function puedoAprobarla(b) {
+  return requiereAprobacion(b) && !aprobadores(b).has(yo()) && b.createdBy !== yo()
+}
+function detalleAprobaciones(b) {
+  const lista = (b.aprobaciones || []).map(a => a.by + ' · ' + fmtStamp(a.at))
+  if (!lista.length) return 'Nadie la ha aprobado todavía. Requiere 2 administradores distintos.'
+  return 'Aprobada por:\n' + lista.join('\n')
+}
+
 function statusClass(s) {
   return {
     borrador: 'bg-gray-100 text-gray-600',
@@ -68,7 +87,9 @@ function statusClass(s) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="b in state.budgetList" :key="b.quoteNumber" class="border-b border-border hover:bg-surface/50 transition">
+          <tr v-for="b in state.budgetList" :key="b.quoteNumber"
+            class="border-b border-border hover:bg-surface/50 transition"
+            :class="requiereAprobacion(b) ? 'bg-amber-50' : ''">
             <td class="py-2.5 px-3 text-sm font-mono">{{ b.quoteNumber }}</td>
             <td class="py-2.5 px-3 text-sm">{{ b.client || '-' }}</td>
             <td class="py-2.5 px-3 text-sm text-text-muted">{{ b.date || '-' }}</td>
@@ -76,12 +97,20 @@ function statusClass(s) {
               <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full" :class="statusClass(b.status)">
                 {{ b.statusLabel }}
               </span>
-              <span v-if="(b.aprobaciones || []).length"
+              <!-- Pendiente de aprobación: es una acción que alguien debe hacer,
+                   así que la lista tiene que cantarlo aunque nadie haya votado. -->
+              <span v-if="requiereAprobacion(b)"
+                class="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-300 whitespace-nowrap"
+                :title="detalleAprobaciones(b)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Requiere aprobación · {{ aprobadores(b).size }}/2
+              </span>
+              <span v-else-if="(b.aprobaciones || []).length"
                 class="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full"
-                :class="new Set((b.aprobaciones || []).map(a => a.by)).size >= 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
-                :title="(b.aprobaciones || []).map(a => a.by + ' · ' + a.at).join('\n')">
+                :class="aprobadores(b).size >= 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                :title="detalleAprobaciones(b)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                {{ new Set((b.aprobaciones || []).map(a => a.by)).size >= 2 ? 'Aprobada' : new Set((b.aprobaciones || []).map(a => a.by)).size + '/2' }}
+                {{ aprobadores(b).size >= 2 ? 'Aprobada' : aprobadores(b).size + '/2' }}
               </span>
             </td>
             <td class="py-2.5 px-3 text-sm font-semibold text-right">{{ b.total }}</td>
@@ -94,7 +123,12 @@ function statusClass(s) {
               <span v-else class="text-text-dim">—</span>
             </td>
             <td class="py-2.5 px-3 flex gap-1.5">
-              <button @click="editar(b.quoteNumber)" class="px-2.5 py-1 text-[11px] font-semibold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition cursor-pointer">Editar</button>
+              <!-- En revisión la acción no es "editar" sino entrar a revisarla y
+                   votar, así que el botón cambia de nombre y de peso visual. -->
+              <button v-if="requiereAprobacion(b)" @click="editar(b.quoteNumber)"
+                :title="puedoAprobarla(b) ? 'Ingresar para revisar y aprobar' : 'Ingresar (tú no puedes aprobar esta propuesta)'"
+                class="px-2.5 py-1 text-[11px] font-semibold bg-amber-500 text-white rounded-md hover:bg-amber-600 transition cursor-pointer">Ingresar</button>
+              <button v-else @click="editar(b.quoteNumber)" class="px-2.5 py-1 text-[11px] font-semibold bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition cursor-pointer">Editar</button>
               <button v-if="b.status === 'adjudicada'" @click="crearProyectoDesdePropuesta(b.quoteNumber)"
                 class="px-2.5 py-1 text-[11px] font-semibold bg-primary-light text-primary rounded-md hover:bg-primary hover:text-white transition cursor-pointer">→ Proyecto</button>
               <button @click="deleteBudget(b.quoteNumber)" class="px-2.5 py-1 text-[11px] font-semibold bg-gray-100 text-red-500 rounded-md hover:bg-red-50 transition cursor-pointer">Eliminar</button>

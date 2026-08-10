@@ -76,6 +76,8 @@ Two behaviors are load-bearing across every saver:
 - **PDF** — adds `export-mode` to `.print-layout` (moves it off-screen at A4 width, 794 px), captures it with `html2canvas-pro` + `jsPDF`, and paginates by cutting at the boundaries of `.print-content`'s top-level blocks. The cover is full-bleed. Output is an image: faithful to the design, text not selectable.
 - **Word** — rebuilds the document with `docx` (paragraphs, lists, tables, embedded images; Gantt as a grid of shaded cells, falling back to a date table when `ganttSpan > 40`).
 
+A proposal can be exported in **any** state, but when `computed.aprobadaInternamente` is false the file gets a diagonal **"SIN APROBACIÓN INTERNA"** watermark — text stamped over the composed pages in the PDF, and a canvas-generated image floated `behindDocument` in the Word header (how Word itself does watermarks). That approval rule lives **only in the store**, and both the UI and the exporter read it from there. In both formats the font size is computed by measuring the string: at a fixed size the rotated text runs off the page.
+
 Two traps here:
 
 - **The document's visual CSS lives outside `@media print`**, scoped under `.print-layout`. The PDF is captured on screen and never goes through the print engine, so a rule left inside `@media print` silently won't apply to the export.

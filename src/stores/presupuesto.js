@@ -647,6 +647,14 @@ const aprobacionInfo = computed(() => {
   }
 })
 
+// Se puede descargar una propuesta en cualquier estado, pero mientras no haya
+// pasado la aprobación interna el archivo sale con marca de agua. Los estados
+// posteriores a la aprobación cuentan como aprobados aunque no tengan votos
+// registrados: las propuestas anteriores al workflow no los tienen.
+const ESTADOS_YA_APROBADOS = ['aprobada', 'enviada', 'rectificacion', 'adjudicada']
+const aprobadaInternamente = computed(() =>
+  aprobacionInfo.value.count >= 2 || ESTADOS_YA_APROBADOS.includes(state.proposalStatus))
+
 async function loadBudgetByNum(qn) {
   let data = null
   if (state.dbConnected) {
@@ -1441,7 +1449,7 @@ export function usePresupuesto() {
     computed: {
       proposalSubtotal, proposalTax, proposalTotal,
       costeoTotalCost, costeoTotalSale, costeoUtilidad, costeoMargen, selectedCount,
-      finKpis, aprobacionInfo, isAdmin,
+      finKpis, aprobacionInfo, aprobadaInternamente, isAdmin,
     },
     fmt,
     fmtMoney, fmtMulti,

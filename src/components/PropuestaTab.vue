@@ -202,8 +202,6 @@ function ganttBarStyle(t) {
       <template v-else-if="state.proposalStatus === 'aprobada'">
         <span class="text-[11px] font-semibold text-emerald-700">Aprobada internamente ✓</span>
         <button @click="enviarACliente" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition cursor-pointer">✉ Enviar a cliente</button>
-        <button @click="exportar('pdf')" :disabled="!!exportando" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'pdf' ? 'Generando…' : 'Descargar PDF' }}</button>
-        <button @click="exportar('word')" :disabled="!!exportando" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'word' ? 'Generando…' : 'Descargar Word' }}</button>
       </template>
       <template v-else-if="state.proposalStatus === 'enviada'">
         <button @click="rectificarPropuesta" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-violet-500 text-white hover:bg-violet-600 transition cursor-pointer">Rectificación del cliente</button>
@@ -220,6 +218,16 @@ function ganttBarStyle(t) {
       <template v-else-if="state.proposalStatus === 'rechazada'">
         <span class="text-[11px] text-text-dim">Propuesta desestimada</span>
       </template>
+
+      <!-- Descarga: disponible en cualquier estado. Si la propuesta todavía no
+           pasó la aprobación interna, el archivo sale con marca de agua. -->
+      <div class="flex items-center gap-2 ml-auto">
+        <span v-if="!storeComputed.aprobadaInternamente.value" class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-600" title="El PDF y el Word saldrán con una marca de agua diagonal">
+          Se descarga con marca de agua
+        </span>
+        <button @click="exportar('pdf')" :disabled="!!exportando" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'pdf' ? 'Generando…' : 'Descargar PDF' }}</button>
+        <button @click="exportar('word')" :disabled="!!exportando" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'word' ? 'Generando…' : 'Descargar Word' }}</button>
+      </div>
     </div>
 
     <!-- Company / Client -->

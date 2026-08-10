@@ -17,8 +17,10 @@ import { jsPDF } from 'jspdf'
 // en su paleta por defecto y el html2canvas original revienta al parsearlos.
 import html2canvas from 'html2canvas-pro'
 import {
-  AlignmentType, BorderStyle, Document, ExternalHyperlink, ImageRun, Packer,
-  Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType,
+  AlignmentType, BorderStyle, Document, ExternalHyperlink, Header,
+  HorizontalPositionAlign, HorizontalPositionRelativeFrom, ImageRun, Packer,
+  Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, VerticalAlign,
+  VerticalPositionAlign, VerticalPositionRelativeFrom, WidthType,
 } from 'docx'
 import { usePresupuesto } from '../stores/presupuesto.js'
 
@@ -33,6 +35,14 @@ const COLORES_FASE = ['3B82F6', '10B981', 'F59E0B', 'EF4444', '8B5CF6', 'EC4899'
 const NEGRO = '18181B'
 const VIOLETA = '8B5CF6'
 const GRIS_BORDE = 'DDDDDD'
+
+const TEXTO_MARCA = 'SIN APROBACIÓN INTERNA'
+
+// La regla de "aprobada internamente" vive en el store, que es de donde la lee
+// también la UI: una sola definición.
+function estaAprobada() {
+  return usePresupuesto().computed.aprobadaInternamente.value
+}
 
 // ---------------------------------------------------------------- utilidades
 
@@ -145,6 +155,46 @@ function agregarPagina(pdf, canvas, desdePx, altoPx, { primera, margen }) {
   )
 }
 
+// Se estampa al final, sobre las páginas ya compuestas, para que quede encima
+// del contenido y no la tape la imagen capturada.
+function estamparMarcaDeAgua(pdf) {
+  const ancho = ANCHO_PAGINA_PX * PX_A_PT
+  const alto = ALTO_PAGINA_PX * PX_A_PT
+  const paginas = pdf.getNumberOfPages()
+
+  const ANGULO = 35
+  const rad = ANGULO * Math.PI / 180
+
+  pdf.setFont('helvetica', 'bold')
+  // Se ajusta el cuerpo para que el texto girado ocupe ~80% del ancho de la
+  // hoja: a tamaño fijo se salía de la página y quedaba cortado en los bordes.
+  pdf.setFontSize(100)
+  const anchoA100 = pdf.getTextWidth(TEXTO_MARCA)
+  const cuerpo = Math.min(48, Math.floor(100 * (ancho * 0.8 / Math.cos(rad)) / anchoA100))
+  pdf.setFontSize(cuerpo)
+
+  // `align: 'center'` no centra bien junto con `angle`, así que el punto de
+  // inicio se calcula a mano desde el centro de la hoja (la y crece hacia abajo).
+  const anchoTexto = pdf.getTextWidth(TEXTO_MARCA)
+  const x = ancho / 2 - (anchoTexto / 2) * Math.cos(rad)
+  const y = alto / 2 + (anchoTexto / 2) * Math.sin(rad)
+
+  for (let i = 1; i <= paginas; i++) {
+    pdf.setPage(i)
+    if (pdf.saveGraphicsState) pdf.saveGraphicsState()
+    // La opacidad necesita un GState; si el motor no lo trae, se dibuja igual
+    // en un rojo claro (peor, pero nunca deja el documento sin marcar).
+    if (pdf.GState && pdf.setGState) {
+      pdf.setGState(new pdf.GState({ opacity: 0.16 }))
+      pdf.setTextColor(200, 0, 0)
+    } else {
+      pdf.setTextColor(240, 190, 190)
+    }
+    pdf.text(TEXTO_MARCA, x, y, { angle: ANGULO })
+    if (pdf.restoreGraphicsState) pdf.restoreGraphicsState()
+  }
+}
+
 export async function exportarPropuestaPDF() {
   const { toast } = usePresupuesto()
   toast('Generando PDF…')
@@ -176,9 +226,11 @@ export async function exportarPropuestaPDF() {
         }
       }
 
+      if (!estaAprobada()) estamparMarcaDeAgua(pdf)
+
       pdf.save(nombreArchivo('pdf'))
     })
-    toast('PDF descargado')
+    toast(estaAprobada() ? 'PDF descargado' : 'PDF descargado (sin aprobación interna)')
   } catch (e) {
     console.error('[export] PDF:', e)
     toast('No se pudo generar el PDF')
@@ -526,6 +578,52 @@ function gantt(state) {
   })]
 }
 
+// Word no tiene una API de marca de agua: la de verdad es una imagen flotante
+// anclada al encabezado y puesta detrás del texto, que es justo lo que Word
+// genera cuando insertas una marca de agua a mano.
+async function encabezadoConMarcaDeAgua() {
+  const lienzo = document.createElement('canvas')
+  lienzo.width = 1400
+  lienzo.height = 1900
+  const ctx = lienzo.getContext('2d')
+  const rad = 35 * Math.PI / 180
+
+  // Igual que en el PDF: se mide y se escala para que el texto girado quepa en
+  // el lienzo, si no queda cortado en los extremos.
+  const cuerpoBase = 130
+  ctx.font = `bold ${cuerpoBase}px Helvetica, Arial, sans-serif`
+  const anchoBase = ctx.measureText(TEXTO_MARCA).width
+  const anchoUtil = (lienzo.width * 0.9) / Math.cos(rad)
+  const cuerpo = Math.floor(cuerpoBase * anchoUtil / anchoBase)
+
+  ctx.translate(lienzo.width / 2, lienzo.height / 2)
+  ctx.rotate(-rad)
+  ctx.font = `bold ${cuerpo}px Helvetica, Arial, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = 'rgba(200, 0, 0, 0.16)'
+  ctx.fillText(TEXTO_MARCA, 0, 0)
+
+  const blob = await new Promise(r => lienzo.toBlob(r, 'image/png'))
+  const data = new Uint8Array(await blob.arrayBuffer())
+
+  return new Header({
+    children: [new Paragraph({
+      children: [new ImageRun({
+        type: 'png',
+        data,
+        transformation: { width: 700, height: 950 },
+        floating: {
+          horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, align: HorizontalPositionAlign.CENTER },
+          verticalPosition: { relative: VerticalPositionRelativeFrom.PAGE, align: VerticalPositionAlign.CENTER },
+          behindDocument: true,
+          allowOverlap: true,
+        },
+      })],
+    })],
+  })
+}
+
 export async function exportarPropuestaWord() {
   const { state, computed, fmt, toast } = usePresupuesto()
   toast('Generando Word…')
@@ -576,18 +674,24 @@ export async function exportarPropuestaWord() {
       }
     }
 
+    const aprobada = estaAprobada()
+    const seccion = {
+      properties: { page: { margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } } },
+      children: hijos,
+    }
+    if (!aprobada) {
+      seccion.headers = { default: await encabezadoConMarcaDeAgua() }
+    }
+
     const doc = new Document({
       creator: state.company || 'Scopes',
       title: `Propuesta ${state.quoteNumber}`,
       styles: { default: { document: { run: { font: 'Calibri', size: 22 } } } },
-      sections: [{
-        properties: { page: { margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } } },
-        children: hijos,
-      }],
+      sections: [seccion],
     })
 
     descargar(await Packer.toBlob(doc), nombreArchivo('docx'))
-    toast('Word descargado')
+    toast(aprobada ? 'Word descargado' : 'Word descargado (sin aprobación interna)')
   } catch (e) {
     console.error('[export] Word:', e)
     toast('No se pudo generar el Word')

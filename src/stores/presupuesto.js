@@ -72,8 +72,10 @@ function makeDefaultCosteo() {
 const state = reactive({
   dbConnected: false,
   user: null,
-  activeSection: 'propuestas',
+  activeSection: 'dashboard',
   sidebarOpen: true,
+  // Solo aplica dentro de la sección Propuestas; al entrar ahí el Sidebar lo
+  // pone en 'historial' (la lista).
   activeTab: 'propuesta',
   tabs: [
     { id: 'propuesta', label: 'Documento' },

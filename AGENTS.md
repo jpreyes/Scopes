@@ -19,7 +19,8 @@
 - Build may warn chunk size >500 kB (Tiptap bundle) — harmless.
 
 ## Project Structure
-- `src/App.vue` — shell, auth guard, tabs, print layout, print handler
+- `src/App.vue` — shell, auth guard, tabs, print layout (`.print-layout`)
+- `src/utils/exportPropuesta.js` — exportación a PDF y Word (carga diferida)
 - `src/stores/presupuesto.js` — single `reactive({...})` object `state`, all logic in `usePresupuesto()` composable (no Pinia/Vuex)
 - `src/stores/pocketbase.js` — PocketBase REST client (fetch-based), user auth + admin auth
 - `src/components/` — `LoginPage`, `Dashboard`, `Sidebar`, `CoverPage`, `ConfigTab` (profile), `PropuestaTab`, `GanttTab`, `CosteoInterno`, `HistorialTab`, `Clientes`, `Catalogo`, `ProyectosTab`, `IngresosTab`, `EgresosTab`, `RichTextEditor`, `PrintGantt`
@@ -70,6 +71,10 @@
 ## Key Conventions
 - **Rich text** sections store HTML in `state.propuestaSections[].content`. Images as base64 data URIs (max 2 MB). Rendered with `v-html` in print. RichTextEditor bound as `:key="'rte-' + s.id + '-' + state.loadVersion"` — increment `loadVersion` to force re-create.
 - **Print layout** uses a separate `.print-layout` div (hidden on screen) with `<CoverPage />` (`page-break-after: always`) and inline `v-html` + `<PrintGantt />` — NOT via `<PropuestaTab />` (avoids duplicate Tiptap instances).
+- **Exportación PDF / Word** (`src/utils/exportPropuesta.js`, import dinámico desde `PropuestaTab`): reemplaza a `window.print()`, que imprimía la página completa. **PDF** = se le añade la clase `export-mode` al `.print-layout` (lo saca fuera de pantalla con ancho A4 = 794 px) y se fotografía con `html2canvas-pro` + `jsPDF`; se pagina cortando por el borde de los bloques de primer nivel de `.print-content`, la portada va a sangre. **Word** = se reconstruye el documento con `docx` (párrafos, listas, tablas, imágenes reales, Gantt como grilla de celdas pintadas; si `ganttSpan > 40` cae a una tabla de fechas). Ambas respetan `printSections` y **excluyen el Costeo Interno**.
+- **Los estilos del documento viven fuera de `@media print`** (scoped bajo `.print-layout`): la captura del PDF ocurre en pantalla y nunca pasa por el motor de impresión, así que si una regla queda dentro de `@media print` no se aplica al exportar.
+- **`html2canvas-pro`, no `html2canvas`**: la paleta por defecto de Tailwind 4 emite colores `oklch()` y el original falla al parsearlos.
+- En `@media print` se oculta `.app-shell` (la app entera). Antes solo había marcas `no-print` sueltas y la cabecera y el menú lateral salían impresos.
 - **Print sections** toggled via `state.printSections` checkboxes. Uses `economica` and `gantt` keys alongside section IDs.
 - **Gantt chart**: unit configurable (`hour`/`day`/`week`/`month`/`year`). Month headers use real calendar day counts.
 - **CosteoInterno is confidential** — never on print/PDF. Margin mode via `costeoMarginMode` (`'venta'` / `'utilidad'`).

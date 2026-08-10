@@ -74,7 +74,7 @@ onMounted(() => {
 <template>
   <LoginPage v-if="!state.user" @auth="onAuth" />
 
-  <div v-else class="min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-auto">
+  <div v-else class="app-shell min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-auto">
 
     <!-- HEADER -->
     <header class="sticky top-0 z-20 bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between">
@@ -254,27 +254,48 @@ onMounted(() => {
 </template>
 
 <style>
-@media screen {
-  .print-layout { display: none; }
+/* El diseño del documento (portada + propuesta) vive FUERA de `@media print`
+   a propósito: la exportación a PDF fotografía este mismo layout en pantalla
+   —nunca pasa por el motor de impresión— y necesita exactamente los mismos
+   estilos. `@media print` abajo solo se encarga de mostrar/ocultar. */
+.print-layout { display: none; }
+
+/* Modo exportación: se despliega fuera de la pantalla con el ancho exacto de
+   un A4 a 96 dpi (794 px), que es la unidad en la que mide el DOM. */
+.print-layout.export-mode {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 794px;
+  background: #fff;
+  z-index: -1;
 }
 
+/* La portada ocupa una hoja completa: 100vh al imprimir, 1123 px (alto de un
+   A4 a 96 dpi) al exportar, donde no existe el viewport de la página. */
+.print-layout.export-mode .print-cover .min-h-\[500px\] { min-height: 1123px !important; }
+
+.print-layout .print-cover .rounded-xl { border-radius: 0 !important; }
+.print-layout a { color: var(--color-primary); text-decoration: none; }
+
 @media print {
+  /* La app entera se oculta: antes solo se marcaban trozos con `no-print` y la
+     cabecera y el menú lateral se colaban en el papel. */
+  .app-shell { display: none !important; }
   .no-print { display: none !important; }
 
   body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-  .print-layout {
-    display: block !important;
-  }
+  .print-layout { display: block !important; }
 
   .print-cover {
-    display: block !important;
     page-break-after: always;
     page-break-inside: avoid;
   }
 
-  .print-cover .rounded-xl { border-radius: 0 !important; }
   .print-cover .min-h-\[500px\] { min-height: 100vh !important; }
+}
 
   .print-content {
     padding: 1.5cm 2cm;
@@ -374,9 +395,6 @@ onMounted(() => {
   .print-content .print-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 24px 0; padding: 16px 0; border-top: 1px solid var(--color-print-border); border-bottom: 1px solid var(--color-print-border); text-align: center; }
   .print-content .print-signatures .line { border-top: 1px solid #333; margin-bottom: 4px; }
   .print-content .print-signatures p { margin: 2px 0; font-size: 9pt; }
-
-  a { color: var(--color-primary); text-decoration: none; }
-}
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }

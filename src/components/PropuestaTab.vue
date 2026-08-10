@@ -1,7 +1,7 @@
 <script setup>
 import { usePresupuesto } from '../stores/presupuesto.js'
 import RichTextEditor from './RichTextEditor.vue'
-import { computed, nextTick } from 'vue'
+import { computed, ref } from 'vue'
 
 const { state, fmt, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections, saveBudget, loadBudget, aprobarPropuesta, enviarARevision, solicitarCambios, enviarACliente, rectificarPropuesta, reenviarACliente, adjudicarPropuesta, rechazarPropuesta, crearProyectoDesdePropuesta } = usePresupuesto()
 
@@ -23,9 +23,20 @@ function fmtAprobacion(iso) {
 
 const soyElCreador = () => state.createdBy && state.user && (state.user.name || state.user.email) === state.createdBy
 
-function handlePrint() {
-  state.activeTab = 'propuesta'
-  nextTick(() => window.print())
+// Exporta el archivo directamente, sin pasar por el diálogo de impresión.
+const exportando = ref('')
+
+async function exportar(formato) {
+  if (exportando.value) return
+  exportando.value = formato
+  try {
+    // Carga diferida: jsPDF + html2canvas + docx pesan ~700 kB y no tienen por
+    // qué entrar en el bundle inicial de la app.
+    const mod = await import('../utils/exportPropuesta.js')
+    await (formato === 'pdf' ? mod.exportarPropuestaPDF() : mod.exportarPropuestaWord())
+  } finally {
+    exportando.value = ''
+  }
 }
 
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -100,7 +111,8 @@ function ganttBarStyle(t) {
         <div class="flex gap-1.5">
           <button @click="saveBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition cursor-pointer">Guardar</button>
           <button @click="loadBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-bg-app text-text-muted border border-border hover:bg-surface hover:text-text transition cursor-pointer">Cargar</button>
-          <button @click="handlePrint" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer">Imprimir</button>
+          <button @click="exportar('pdf')" :disabled="!!exportando" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'pdf' ? 'Generando…' : 'PDF' }}</button>
+          <button @click="exportar('word')" :disabled="!!exportando" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'word' ? 'Generando…' : 'Word' }}</button>
         </div>
       </div>
     </div>
@@ -190,7 +202,8 @@ function ganttBarStyle(t) {
       <template v-else-if="state.proposalStatus === 'aprobada'">
         <span class="text-[11px] font-semibold text-emerald-700">Aprobada internamente ✓</span>
         <button @click="enviarACliente" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition cursor-pointer">✉ Enviar a cliente</button>
-        <button @click="handlePrint" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer">Descargar PDF</button>
+        <button @click="exportar('pdf')" :disabled="!!exportando" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'pdf' ? 'Generando…' : 'Descargar PDF' }}</button>
+        <button @click="exportar('word')" :disabled="!!exportando" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'word' ? 'Generando…' : 'Descargar Word' }}</button>
       </template>
       <template v-else-if="state.proposalStatus === 'enviada'">
         <button @click="rectificarPropuesta" class="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-violet-500 text-white hover:bg-violet-600 transition cursor-pointer">Rectificación del cliente</button>

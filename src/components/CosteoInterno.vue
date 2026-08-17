@@ -47,6 +47,28 @@ function onDrop(e, groupId) {
   }
 }
 
+/**
+ * Las mismas tres operaciones del drag, por toque. `dragstart`/`drop` son
+ * HTML5 y no existen en táctil, así que en un teléfono los grupos no se podían
+ * armar: se veían y no recibían nada. La semántica se conserva —de categoría a
+ * grupo copia, de grupo a grupo mueve— porque debajo son las mismas funciones
+ * del store que usa `onDrop`.
+ */
+function asignarItem(itemKey, groupId) {
+  if (!groupId) return
+  addItemToGroup(groupId, itemKey)
+}
+function asignarCategoria(cat, groupId) {
+  if (!groupId) return
+  cat.items.forEach(i => addItemToGroup(groupId, i._key))
+}
+function moverItem(fromGroupId, idx, key, toGroupId) {
+  if (!toGroupId || toGroupId === fromGroupId) return
+  addItemToGroup(toGroupId, key)
+  removeItemFromGroup(fromGroupId, idx)
+}
+const otrosGrupos = id => state.costeoGroups.filter(g => g.id !== id)
+
 const newGroupName = ref('')
 </script>
 
@@ -95,6 +117,15 @@ const newGroupName = ref('')
                 class="w-full text-sm font-bold text-text bg-transparent border border-transparent hover:border-border focus:border-primary rounded px-1 outline-none transition" />
             </div>
             <span class="text-sm font-bold text-primary shrink-0">{{ fmt(cat.items.reduce((s,i) => s + (i.qty||0)*(i.days||0)*(i.sale||0), 0)) }}</span>
+            <!-- El <select> es una acción, no un valor: vuelve solo a «→ grupo»
+                 para poder mandar la misma categoría a dos grupos seguidos. -->
+            <select v-if="state.costeoGroups.length" draggable="false"
+              :value="''" @change="asignarCategoria(cat, $event.target.value); $event.target.value = ''"
+              class="ml-2 shrink-0 px-1.5 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+              title="Agregar toda la categoría a un grupo">
+              <option value="">→ grupo</option>
+              <option v-for="g in state.costeoGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+            </select>
             <button @click="removeCosteoCategory(cat.id)" class="text-red-400 hover:text-red-600 text-sm ml-2 transition cursor-pointer shrink-0" title="Eliminar categoría">&times;</button>
           </div>
 
@@ -128,6 +159,14 @@ const newGroupName = ref('')
                   <span class="text-xs font-bold text-primary min-w-[5rem] text-right">{{ fmt((it.qty||0)*(it.days||0)*(it.sale||0)) }}</span>
                 </div>
               </div>
+
+              <select v-if="state.costeoGroups.length" draggable="false"
+                :value="''" @change="asignarItem(it._key, $event.target.value); $event.target.value = ''"
+                class="shrink-0 px-1.5 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+                title="Agregar a un grupo">
+                <option value="">→</option>
+                <option v-for="g in state.costeoGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+              </select>
 
               <button @click="removeCosteoItem(cat, i)" class="text-red-400 hover:text-red-600 text-lg px-1 opacity-30 hover:opacity-100 transition cursor-pointer shrink-0">&times;</button>
             </div>
@@ -169,13 +208,20 @@ const newGroupName = ref('')
 
           <div class="p-1.5 min-h-[40px]">
             <div v-if="!g.itemKeys.length" class="text-[10px] text-text-dim text-center py-2 border border-dashed border-border rounded-lg">
-              Arrastra items aquí
+              Arrastra items aquí, o mándalos con «→» desde la categoría
             </div>
             <div v-for="(key, idx) in g.itemKeys" :key="key"
               draggable="true" @dragstart="onDragStartGroup($event, key, g.id)"
               class="flex items-center justify-between px-2 py-1 mb-0.5 bg-surface/50 rounded text-[11px] cursor-grab hover:bg-surface transition">
               <span class="truncate flex-1">{{ findItemByKey(key)?.desc || '—' }}</span>
               <span class="font-semibold text-primary ml-1">{{ findItemByKey(key) ? fmt((findItemByKey(key).qty||0)*(findItemByKey(key).days||0)*(findItemByKey(key).sale||0)) : '' }}</span>
+              <select v-if="otrosGrupos(g.id).length" draggable="false"
+                :value="''" @change="moverItem(g.id, idx, key, $event.target.value); $event.target.value = ''"
+                class="shrink-0 ml-1 px-1 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+                title="Mover a otro grupo">
+                <option value="">⇄</option>
+                <option v-for="og in otrosGrupos(g.id)" :key="og.id" :value="og.id">{{ og.name }}</option>
+              </select>
               <button @click="removeItemFromGroup(g.id, idx)" class="text-red-400 hover:text-red-600 text-xs ml-1 transition cursor-pointer">&times;</button>
             </div>
           </div>

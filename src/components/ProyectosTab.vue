@@ -45,6 +45,17 @@ function onQuoteChange() {
   form.value.currency = q.currency || '$'
 }
 
+/**
+ * Cambiar de estado sin arrastrar. `dragstart`/`drop` son HTML5 y no existen
+ * en táctil, así que en un teléfono el kanban era decorativo: se veía, no se
+ * podía usar. El selector queda también en escritorio, donde de todos modos es
+ * menos trabajo que arrastrar una tarjeta entre cuatro columnas.
+ */
+function cambiarEstado(p, status) {
+  if (!status || p.status === status) return
+  saveProyecto({ ...p, status })
+}
+
 // --- Kanban drag ---
 let kanbanDragId = null
 function kanbanDragStart(e, id) {
@@ -56,9 +67,7 @@ function kanbanDrop(e, status) {
   e.preventDefault()
   const id = e.dataTransfer.getData('text/plain') || kanbanDragId
   const p = state.proyectos.find(x => x.id === id)
-  if (p && p.status !== status) {
-    saveProyecto({ ...p, status })
-  }
+  if (p) cambiarEstado(p, status)
   kanbanDragId = null
 }
 
@@ -218,6 +227,13 @@ const hasCalendar = computed(() => !!timeline.value)
                 </div>
               </div>
               <p v-if="p.clientName" class="text-[10px] text-text-muted truncate mt-0.5">{{ p.clientName }}</p>
+              <!-- `:value` + `@change` y no `v-model`: el estado lo manda el
+                   registro guardado, no el <select>. -->
+              <select :value="p.status" @change="cambiarEstado(p, $event.target.value)" @click.stop
+                class="mt-2 w-full px-2 py-1 border border-border rounded-lg text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+                title="Cambiar estado">
+                <option v-for="s in STATUS" :key="s.id" :value="s.id">{{ s.label }}</option>
+              </select>
               <div class="mt-2 flex items-center justify-between text-[10px] text-text-dim">
                 <span>{{ p.startDate || '—' }}{{ p.endDate ? ' → ' + p.endDate.slice(5) : '' }}</span>
                 <span class="font-semibold text-text">{{ fmtMoney(p.awardAmount, p.currency) }}</span>
@@ -228,7 +244,7 @@ const hasCalendar = computed(() => !!timeline.value)
               </div>
             </div>
             <div v-if="!byStatus(st.id).length" class="text-[10px] text-text-dim text-center py-6 border border-dashed border-border rounded-xl">
-              Arrastra proyectos aquí
+              Arrastra proyectos aquí, o cambia el estado en la tarjeta
             </div>
           </div>
         </div>

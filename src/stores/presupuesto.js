@@ -1443,9 +1443,21 @@ function exportHistorialExcel() {
   XLSX.writeFile(wb, 'Historial_Presupuestos.xlsx')
 }
 
+/**
+ * Único punto de entrada a las secciones: el riel de escritorio, la barra
+ * inferior del teléfono y la página «Más» pasan los tres por acá. Entrar a
+ * Propuestas siempre cae en la lista, nunca en el formulario que quedó abierto
+ * la vez anterior.
+ */
+function goSection(id) {
+  state.activeSection = id
+  if (id === 'propuestas') state.activeTab = 'historial'
+}
+
 export function usePresupuesto() {
   return {
     state,
+    goSection,
     computed: {
       proposalSubtotal, proposalTax, proposalTotal,
       costeoTotalCost, costeoTotalSale, costeoUtilidad, costeoMargen, selectedCount,

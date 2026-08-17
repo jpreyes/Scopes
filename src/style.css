@@ -28,3 +28,34 @@
   --color-print-border: #ddd;
   --color-print-text: #666;
 }
+
+/* La barra inferior flota sobre la página, así que la última tarjeta quedaría
+   debajo de ella. En un teléfono con gesto de inicio hay además una franja que
+   despejar. */
+.pb-tabbar {
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+}
+/* Pasado este ancho manda el riel lateral y la reserva sobra. Esto tiene que
+   vivir DENTRO de la clase y no como utilidad `md:pb-*`: las dos tendrían la
+   misma especificidad y la hoja de Tailwind se carga después, así que la
+   utilidad perdería sin avisar. */
+@media (min-width: 768px) {
+  .pb-tabbar {
+    padding-bottom: 1.5rem;
+  }
+}
+
+.bottom-tabbar {
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Sobre la barra, no al lado: con cuatro pestañas la píldora queda centrada y
+   un aviso pegado al borde inferior derecho igual la rozaría. */
+.toast-bottom {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .toast-bottom {
+    bottom: 1.5rem;
+  }
+}

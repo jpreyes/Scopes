@@ -4,6 +4,8 @@ import { usePresupuesto } from './stores/presupuesto.js'
 import * as pb from './stores/pocketbase.js'
 import CoverPage from './components/CoverPage.vue'
 import Sidebar from './components/Sidebar.vue'
+import BottomNav from './components/BottomNav.vue'
+import MasPage from './components/MasPage.vue'
 import PropuestaTab from './components/PropuestaTab.vue'
 import CosteoInterno from './components/CosteoInterno.vue'
 import GanttTab from './components/GanttTab.vue'
@@ -79,7 +81,8 @@ onMounted(() => {
     <!-- HEADER -->
     <header class="sticky top-0 z-20 bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between">
       <div class="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-        <button @click="state.sidebarOpen = !state.sidebarOpen" class="shrink-0 text-white/60 hover:text-white transition cursor-pointer p-1 -ml-1" title="Menú">
+        <!-- Solo en escritorio: en el teléfono no hay riel que plegar. -->
+        <button @click="state.sidebarOpen = !state.sidebarOpen" class="hidden md:block shrink-0 text-white/60 hover:text-white transition cursor-pointer p-1 -ml-1" title="Menú">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
@@ -127,7 +130,7 @@ onMounted(() => {
           </div>
 
           <!-- CONTENT -->
-          <div class="p-3 sm:p-6 no-print">
+          <div class="p-3 sm:p-6 pb-tabbar no-print">
             <!-- Propuestas: lista o formulario -->
             <template v-if="state.activeSection === 'propuestas'">
               <HistorialTab v-if="state.activeTab === 'historial'" />
@@ -159,10 +162,15 @@ onMounted(() => {
 
             <!-- Configuración -->
             <ConfigTab v-else-if="state.activeSection === 'config'" />
+
+            <!-- Más: la puerta al resto de las secciones en el teléfono -->
+            <MasPage v-else-if="state.activeSection === 'mas'" />
           </div>
       </div>
 
     </div>
+
+    <BottomNav />
   </div>
   <!-- PRINT LAYOUT: Cover + Propuesta -->
   <div class="print-layout">
@@ -247,8 +255,10 @@ onMounted(() => {
   </div>
 
   <!-- Toast notification -->
+  <!-- `toast-bottom` en vez de `bottom-6`: en el teléfono la barra flotante
+       ocupa esa esquina y el aviso quedaba debajo. -->
   <div v-if="state.toast"
-    class="fixed bottom-6 right-6 z-50 bg-text text-surface px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold animate-fade-in">
+    class="toast-bottom fixed right-6 z-50 bg-text text-surface px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold animate-fade-in">
     {{ state.toast }}
   </div>
 </template>

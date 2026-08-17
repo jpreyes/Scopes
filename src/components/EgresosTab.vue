@@ -36,7 +36,7 @@ function toggleEstado(r) {
 </script>
 
 <template>
-  <div class="p-3 sm:p-6 space-y-4">
+  <div class="space-y-4">
     <div class="flex items-center justify-between">
       <h1 class="text-lg font-bold text-text">Egresos</h1>
       <button @click="exportEgresosExcel" class="px-3 py-1.5 text-xs font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition cursor-pointer">Exportar</button>

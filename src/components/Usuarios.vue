@@ -66,7 +66,7 @@ async function confirmDelete(u) {
 </script>
 
 <template>
-  <div class="p-3 sm:p-6 space-y-4">
+  <div class="space-y-4">
     <div class="flex items-center justify-between">
       <h1 class="text-lg font-bold text-text">Usuarios</h1>
       <button @click="openAdd" class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">+ Usuario</button>

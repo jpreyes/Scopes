@@ -5,7 +5,7 @@ const d = state.dashboardData
 </script>
 
 <template>
-  <div class="p-3 sm:p-6 space-y-6">
+  <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-lg font-bold text-text">Dashboard</h1>
       <button v-if="!d.total" @click="seedSampleData"
@@ -102,7 +102,8 @@ const d = state.dashboardData
         <h2 class="text-sm font-bold text-text">Recientes</h2>
       </div>
       <div v-if="!d.recent.length" class="px-4 py-8 text-center text-text-dim text-sm">No hay propuestas aún.</div>
-      <table v-else class="w-full text-xs">
+      <div v-else class="overflow-x-auto">
+      <table class="w-full text-xs min-w-[560px]">
         <thead>
           <tr class="bg-bg-app text-text-muted uppercase tracking-wider text-[10px]">
             <th class="py-2 px-4 text-left font-semibold">N°</th>
@@ -128,6 +129,7 @@ const d = state.dashboardData
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 </template>

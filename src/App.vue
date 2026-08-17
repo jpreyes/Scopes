@@ -76,7 +76,12 @@ onMounted(() => {
 <template>
   <LoginPage v-if="!state.user" @auth="onAuth" />
 
-  <div v-else class="app-shell min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-auto">
+  <!-- `overflow-x-clip` y no `auto`: con `auto`, cualquier desborde interno
+       —una tabla ancha— hacía scrollear la app entera y se llevaba de paseo el
+       header sticky. Cada tabla ancha scrollea ahora dentro de su contenedor.
+       `clip` en vez de `hidden` porque `hidden` crea un contenedor de scroll y
+       rompe el `sticky` del header. -->
+  <div v-else class="app-shell min-h-screen bg-gradient-to-br from-bg-app via-surface to-bg-app overflow-x-clip">
 
     <!-- HEADER -->
     <header class="sticky top-0 z-20 bg-gradient-to-r from-header-from via-header-via to-header-to text-white px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap gap-y-2 items-center justify-between">

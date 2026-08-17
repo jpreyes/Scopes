@@ -35,7 +35,7 @@ const tipoColor = t => t === 'recurso' ? 'bg-blue-100 text-blue-700' : 'bg-slate
 </script>
 
 <template>
-  <div class="p-3 sm:p-6 space-y-4">
+  <div class="space-y-4">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <h1 class="text-lg font-bold text-text">Catálogo</h1>
       <button @click="openAdd" class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">+ Producto</button>
@@ -44,7 +44,7 @@ const tipoColor = t => t === 'recurso' ? 'bg-blue-100 text-blue-700' : 'bg-slate
     <!-- Form -->
     <div v-if="editingId !== null" class="bg-surface border border-border rounded-xl p-4 shadow-sm space-y-3">
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <input v-model="form.name" placeholder="Nombre *" class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface col-span-2" />
+        <input v-model="form.name" placeholder="Nombre *" class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface sm:col-span-2" />
         <input v-model.number="form.price" type="number" min="0" placeholder="Precio *" class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface" />
         <select v-model="form.unit" class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface">
           <option v-for="u in units" :key="u" :value="u">{{ u }}</option>
@@ -53,7 +53,7 @@ const tipoColor = t => t === 'recurso' ? 'bg-blue-100 text-blue-700' : 'bg-slate
           <option value="producto">Producto</option>
           <option value="recurso">Recurso</option>
         </select>
-        <input v-model="form.category" placeholder="Categoría" class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface col-span-3" />
+        <input v-model="form.category" placeholder="Categoría" class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface sm:col-span-3" />
       </div>
       <div class="flex gap-2">
         <button @click="submitForm" class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">Guardar</button>
@@ -81,7 +81,7 @@ const tipoColor = t => t === 'recurso' ? 'bg-blue-100 text-blue-700' : 'bg-slate
     </div>
 
     <div v-else class="overflow-x-auto">
-      <table class="w-full text-xs">
+      <table class="w-full text-xs min-w-[640px]">
         <thead>
           <tr class="bg-bg-app text-text-muted uppercase tracking-wider text-[10px]">
             <th class="py-2 px-3 text-left font-semibold">Nombre</th>

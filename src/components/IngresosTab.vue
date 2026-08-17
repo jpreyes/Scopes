@@ -36,7 +36,7 @@ function toggleEstado(r) {
 </script>
 
 <template>
-  <div class="p-3 sm:p-6 space-y-4">
+  <div class="space-y-4">
     <div class="flex items-center justify-between">
       <h1 class="text-lg font-bold text-text">Ingresos</h1>
       <div class="flex gap-2">

@@ -276,7 +276,9 @@ function ganttBarStyle(t) {
         PROPUESTA ECONÓMICA
       </h2>
       <div class="border border-border/80 rounded-xl overflow-x-auto shadow-sm">
-        <table class="w-full">
+        <!-- Las columnas fijas ya suman ~390 px: sin `min-w` la descripción
+             quedaba en un hilo en vez de scrollear. -->
+        <table class="w-full min-w-[560px]">
           <thead>
             <tr class="bg-gradient-to-r from-slate-800 to-slate-700 text-white text-[11px] uppercase tracking-wider">
               <th class="py-2.5 px-3 text-center w-14">ITEM</th>

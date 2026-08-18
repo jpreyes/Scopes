@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { usePresupuesto } from '../stores/presupuesto.js'
 import * as pb from '../stores/pocketbase.js'
 
-const { state, toast } = usePresupuesto()
+const { state, toast, seedSampleData } = usePresupuesto()
 
 const editName = ref(state.user?.name || '')
 const editEmail = ref(state.user?.email || '')
@@ -66,6 +66,20 @@ async function saveProfile() {
       <button @click="saveProfile" :disabled="saving"
         class="w-full py-2.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer disabled:opacity-50">
         {{ saving ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </section>
+
+    <!-- Los datos de ejemplo, acá y no en el Dashboard: se usan una vez, y en
+         primera plana ocupaban el lugar de lo que sí se mira todos los días. -->
+    <section class="bg-surface border border-border rounded-xl p-5 space-y-3">
+      <h2 class="text-sm font-bold text-text border-b border-border pb-2">Datos de ejemplo</h2>
+      <p class="text-xs text-text-muted">
+        Llena la cuenta con propuestas, clientes y catálogo de mentira para ver cómo se comporta la
+        app. Se escriben como registros normales, así que después hay que borrarlos a mano.
+      </p>
+      <button @click="seedSampleData"
+        class="w-full py-2.5 text-sm font-semibold border border-border text-text rounded-lg hover:bg-bg-app transition cursor-pointer">
+        Cargar datos de ejemplo
       </button>
     </section>
 

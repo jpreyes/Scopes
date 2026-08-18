@@ -1,17 +1,18 @@
 <script setup>
 import { usePresupuesto } from '../stores/presupuesto.js'
-const { state, loadBudgetByNum, seedSampleData, fmtMulti, computed } = usePresupuesto()
+const { state, loadBudgetByNum, fmtMulti, computed } = usePresupuesto()
 const d = state.dashboardData
 </script>
 
 <template>
   <div class="space-y-6">
+    <!-- "Cargar datos de ejemplo" vivía acá, en la esquina del Dashboard. Es
+         una acción que se usa una vez en la vida de la cuenta y que escribe
+         datos falsos en la base: en primera plana ocupa el sitio de lo que sí
+         se mira a diario, y está a un toque de distancia de tocarla sin
+         querer. Se movió a Mi Perfil. -->
     <div class="flex items-center justify-between">
       <h1 class="text-lg font-bold text-text">Dashboard</h1>
-      <button v-if="!d.total" @click="seedSampleData"
-        class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">
-        Cargar datos de ejemplo
-      </button>
     </div>
 
     <!-- Finanzas KPI (confidencial: solo admins) -->

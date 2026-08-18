@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scopes</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- iOS ignora el manifest para el icono de la pantalla de inicio: usa
+         `apple-touch-icon`, y sin él se queda con una miniatura de la página.
+         Es la mitad de por qué el acceso directo se veía mal. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#5b21b6" />
   </head>
   <body>
     <div id="app"></div>

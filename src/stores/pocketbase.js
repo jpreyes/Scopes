@@ -7,44 +7,61 @@ async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' }
   if (userToken) headers['Authorization'] = 'Bearer ' + userToken
   const res = await fetch(BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.message || res.statusText) }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    const e = new Error(err.message || res.statusText)
+    // El código viaja con el error para poder distinguir "el servidor te
+    // rechazó" de "no hubo servidor". Sin esto, quedarse sin señal un segundo
+    // se trataba igual que una sesión revocada y cerraba la sesión.
+    e.status = res.status
+    throw e
+  }
   return res.json()
 }
 
 // --- Web user auth ---
 // Toda la app trabaja con el token del usuario logueado. NO existe login de
 // _superusers en el frontend: Vite hornea las env vars en el bundle público.
+//
+// La sesión vive en `localStorage` y no en `sessionStorage`, y esa palabra es
+// toda la diferencia: `sessionStorage` se borra al cerrar la pestaña, así que
+// en el teléfono —donde cerrar la app es lo normal— había que escribir la clave
+// en cada entrada. Se reportó así. `localStorage` sobrevive, que es lo que hace
+// PocketBase por defecto con su propio `authStore` y lo que ya hacía inspecta.
+//
+// El token igual caduca en el servidor; `refreshUser()` lo renueva al arrancar,
+// así que usar la app la mantiene viva y una cuenta revocada deja de entrar.
 
 export async function loginUser(email, password) {
   const data = await api('POST', '/api/collections/users/auth-with-password', { identity: email, password })
   userToken = data.token
-  sessionStorage.setItem('pb_user_token', data.token)
-  sessionStorage.setItem('pb_user', JSON.stringify(data.record))
+  localStorage.setItem('pb_user_token', data.token)
+  localStorage.setItem('pb_user', JSON.stringify(data.record))
   return data
 }
 
 export function restoreUserToken() {
-  userToken = sessionStorage.getItem('pb_user_token')
+  userToken = localStorage.getItem('pb_user_token')
   return !!userToken
 }
 
 export function getLoggedUser() {
-  const raw = sessionStorage.getItem('pb_user')
+  const raw = localStorage.getItem('pb_user')
   return raw ? JSON.parse(raw) : null
 }
 
 export function logoutUser() {
   userToken = null
-  sessionStorage.removeItem('pb_user_token')
-  sessionStorage.removeItem('pb_user')
+  localStorage.removeItem('pb_user_token')
+  localStorage.removeItem('pb_user')
 }
 
 // Revalida el token guardado y devuelve el record fresco (trae `role` al día).
 export async function refreshUser() {
   const data = await api('POST', '/api/collections/users/auth-refresh')
   userToken = data.token
-  sessionStorage.setItem('pb_user_token', data.token)
-  sessionStorage.setItem('pb_user', JSON.stringify(data.record))
+  localStorage.setItem('pb_user_token', data.token)
+  localStorage.setItem('pb_user', JSON.stringify(data.record))
   return data.record
 }
 

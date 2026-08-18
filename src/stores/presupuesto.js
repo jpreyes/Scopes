@@ -167,9 +167,17 @@ async function dbLogin() {
     migrateLocalToPB()
     dedupeQuotes()
     migrarEstadosViejos()
-  } catch {
-    pb.logoutUser()
-    state.user = null
+  } catch (e) {
+    // Solo un rechazo del servidor cierra la sesión. Un fallo de red no: el
+    // teléfono cambia de wifi a datos y la petición muere con la señal
+    // completa, y tratar eso como "tu sesión ya no vale" es la otra mitad de
+    // por qué había que escribir la clave tan seguido. Sin conexión la app ya
+    // sabe funcionar contra localStorage, así que se queda dentro y
+    // desconectada, que es un estado que existe y está previsto.
+    if (e && (e.status === 401 || e.status === 403)) {
+      pb.logoutUser()
+      state.user = null
+    }
     state.dbConnected = false
   }
 }

@@ -13,17 +13,15 @@ const saving = ref(false)
 async function saveProfile() {
   saving.value = true
   try {
-    const body = { name: editName.value, cargo: editCargo.value }
-    if (editEmail.value !== state.user?.email) body.email = editEmail.value
-    const res = await fetch(pb.getBaseUrl() + '/api/collections/users/records/' + state.user?.id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionStorage.getItem('pb_user_token') },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) throw new Error('Error al guardar')
-    const updated = await res.json()
+    // Por el cliente de pb.js, que lleva el token de la sesión. Antes leía el
+    // token de `sessionStorage`, donde ya no está (la sesión pasó a
+    // `localStorage`), así que el perfil no se podía guardar.
+    const body = { id: state.user?.id, name: editName.value, cargo: editCargo.value }
+    const email = editEmail.value.trim().toLowerCase()
+    if (email !== state.user?.email) body.email = email
+    const updated = await pb.saveUser(body)
     state.user = updated
-    sessionStorage.setItem('pb_user', JSON.stringify(updated))
+    localStorage.setItem('pb_user', JSON.stringify(updated))
     toast('Perfil actualizado ✓')
   } catch (e) {
     toast(e.message || 'Error')

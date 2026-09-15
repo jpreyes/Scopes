@@ -27,7 +27,9 @@ docker compose -f deploy/docker-compose.yml up -d
 docker ps -a --filter "label=com.docker.compose.project=scopes"
 ```
 
-Backend is a separate stack: container `pb-scopes` (`127.0.0.1:8091`), data in `/root/pocketbase/scopes/pb_data`, migrations bind-mounted from `pocketbase/pb_migrations/` in this repo. Public at `https://scopes.jpreyes.cl` via the box's Cloudflare Tunnel → `127.0.0.1:8092`.
+Backend is a separate stack: container `pb-scopes` (`127.0.0.1:8091`), data in `/root/pocketbase/scopes/pb_data`, migrations bind-mounted from `pocketbase/pb_migrations/` and **hooks from `pocketbase/pb_hooks/`** in this repo (PocketBase only applies new migrations and reloads hooks on restart: `cd /root/pocketbase && docker compose up -d scopes`). Public at `https://scopes.jpreyes.cl` via the box's Cloudflare Tunnel → `127.0.0.1:8092`.
+
+**The hooks are load-bearing, not optional** (`pocketbase/pb_hooks/lib/quotes.js`): they set `createdBy`/`createdAt` (immutable) and `updatedBy`, assign the final quote number on approval, and write `quote_versions`. Without them proposals stay `PROV-…` forever and there is no version history. They follow the JSVM rules in `/root/CLAUDE.md` (helpers via `require()` inside each handler). To test hook or migration changes, run a throwaway PocketBase on a copy of `pb_data` (`pocketbase:local` image, other port) — never against `pb-scopes`.
 
 Schema changes made in the PocketBase admin UI (`/_/`) land as **new migration files in this repo's working tree** — commit them.
 
@@ -44,7 +46,9 @@ Vite 8 + Vue 3 SFC (`<script setup>`) + Tailwind 4 (`@tailwindcss/vite`, no conf
 
 ### Data layer — PocketBase-first with localStorage fallback
 
-`src/stores/pocketbase.js` is a hand-rolled REST client over `fetch` (no PocketBase SDK): one `api()` helper plus per-collection `get*`/`save*`/`delete*`. Collections: `users`, `clients`, `catalog`, `quotes`, `proyectos`, `ingresos`, `egresos`.
+`src/stores/pocketbase.js` is a hand-rolled REST client over `fetch` (no PocketBase SDK): one `api()` helper plus per-collection `get*`/`save*`/`delete*`. Collections: `users`, `clients`, `catalog`, `quotes`, `quote_versions` (read-only to the API, written by the hook), `proyectos`, `ingresos`, `egresos`.
+
+**The open proposal is saved by record id (`state.quoteId`), never by quote number** — the number changes on approval (`PROV-…` → `CT-PS-NNN-YYYY`). `persistBudget()` queues saves, warns before overwriting someone else's newer save, and only toasts success after the server confirms. `loadBudgetByNum()` must replace the *whole* editor (`applyContent()`): anything it leaves untouched survives from the previously opened proposal and gets saved into this one — that is how a proposal once showed "someone else's costeo". AGENTS.md has the details.
 
 Two behaviors are load-bearing across every saver:
 

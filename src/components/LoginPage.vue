@@ -9,6 +9,7 @@ const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const verClave = ref(false)
 
 const emit = defineEmits(['auth'])
 
@@ -20,7 +21,9 @@ async function submit() {
     state.user = data.record
     emit('auth', data.record)
   } catch (e) {
-    error.value = e.message || 'Error de autenticación'
+    error.value = e.status === 400
+      ? 'Correo o contraseña incorrectos. Revisa que la contraseña respete mayúsculas y minúsculas.'
+      : e.status ? (e.message || 'Error de autenticación') : 'Sin conexión con el servidor.'
   } finally {
     loading.value = false
   }
@@ -40,12 +43,20 @@ async function submit() {
         <label class="text-xs text-text-muted">
           Email
           <input type="email" v-model="email" required placeholder="correo@ejemplo.cl"
+            autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
             class="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm outline-none focus:border-primary bg-bg-app text-text" />
         </label>
-        <label class="text-xs text-text-muted">
+        <label class="text-xs text-text-muted block">
           Contraseña
-          <input type="password" v-model="password" required
-            class="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm outline-none focus:border-primary bg-bg-app text-text" />
+          <span class="relative block mt-1">
+            <input :type="verClave ? 'text' : 'password'" v-model="password" required autocomplete="current-password"
+              autocapitalize="none" autocorrect="off" spellcheck="false"
+              class="w-full px-3 py-2 pr-16 border border-border rounded-lg text-sm outline-none focus:border-primary bg-bg-app text-text" />
+            <button type="button" @click="verClave = !verClave"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-text-muted hover:text-text cursor-pointer">
+              {{ verClave ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </span>
         </label>
 
         <p v-if="error" class="text-xs text-red-500 font-medium">{{ error }}</p>

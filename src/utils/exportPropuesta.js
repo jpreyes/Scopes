@@ -402,11 +402,14 @@ function celda(texto, { bold = false, color, fondo, align = AlignmentType.LEFT, 
   })
 }
 
+// Mismo formato que `.print-section h3` en el PDF: 11 pt, negrita, barra
+// violeta a la izquierda. Todas las secciones pasan por acá, incluidas la
+// propuesta económica y la Carta Gantt.
 function tituloSeccion(texto) {
   return new Paragraph({
     spacing: { before: 280, after: 120 },
     border: { left: { style: BorderStyle.SINGLE, size: 18, color: VIOLETA, space: 8 } },
-    children: [new TextRun({ text: texto, bold: true, size: 24, color: NEGRO })],
+    children: [new TextRun({ text: texto, bold: true, size: 22, color: NEGRO })],
   })
 }
 
@@ -641,6 +644,9 @@ export async function exportarPropuestaWord() {
       border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: NEGRO } },
       children: [new TextRun({ text: 'Propuesta', bold: true, size: 28, color: NEGRO })],
     }))
+    if (state.subheader) {
+      hijos.push(new Paragraph({ spacing: { before: 60, after: 20 }, children: [new TextRun({ text: state.subheader, bold: true, size: 22, color: NEGRO })] }))
+    }
     hijos.push(new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: state.quoteNumber, size: 20, color: '666666' })] }))
 
     hijos.push(tablaMeta(state))

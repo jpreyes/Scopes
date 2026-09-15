@@ -2,7 +2,14 @@
 import { usePresupuesto } from '../stores/presupuesto.js'
 import { computed } from 'vue'
 
-const { state, addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks } = usePresupuesto()
+const { state, addGanttTask, removeGanttTask, addGanttPhase, renameGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks } = usePresupuesto()
+
+// El nombre de la sección se aplica al salir del campo (no en cada tecla): las
+// tareas cuelgan de ella por el nombre y hay que moverlas juntas.
+function onRenamePhase(pi, e) {
+  renameGanttPhase(pi, e.target.value)
+  e.target.value = state.ganttPhases[pi] ?? ''
+}
 
 function moveGanttTask(id, dir) {
   const idx = state.ganttTasks.findIndex(t => t.id === id)
@@ -129,12 +136,15 @@ function calcBarStyle(t) {
           </tr>
         </thead>
           <tbody>
-            <template v-for="(phase, pi) in state.ganttPhases" :key="phase">
+            <!-- key por posición y no por nombre: con el nombre como key, cada
+                 tecla cambiaba la key y Vue rehacía la fila, así que el campo
+                 perdía el foco tras la primera letra. -->
+            <template v-for="(phase, pi) in state.ganttPhases" :key="pi">
               <tr class="bg-surface">
                 <td class="py-2 px-3 font-bold text-text text-xs sticky left-0 bg-surface z-10 w-48">
                   <div class="flex items-center justify-between gap-2">
                     <span class="text-slate-500 font-mono text-[10px] mr-1">{{ pi+1 }}.</span>
-                    <input type="text" v-model="state.ganttPhases[pi]"
+                    <input type="text" :value="phase" @change="onRenamePhase(pi, $event)" @keydown.enter="$event.target.blur()"
                       class="bg-transparent border-b border-dashed border-gray-300 outline-none focus:border-primary text-xs font-bold flex-1 min-w-0" />
                     <button @click="removeGanttPhase(pi)" class="text-red-400 hover:text-red-600 text-sm px-1 shrink-0 transition cursor-pointer">&times;</button>
                   </div>

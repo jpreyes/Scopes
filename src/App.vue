@@ -28,7 +28,7 @@ const icons = {
   historial: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
 }
 
-const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog, loadProyectos, loadIngresos, loadEgresos, resetBudget, generateQuoteNumber } = usePresupuesto()
+const { state, fmt, computed, dbLogin, loadHistorial, loadDashboardData, loadClients, loadCatalog, loadProyectos, loadIngresos, loadEgresos, resetBudget } = usePresupuesto()
 
 // El Costeo Interno es confidencial: solo admins.
 const visibleTabs = vueComputed(() =>
@@ -92,10 +92,10 @@ onMounted(() => {
         </button>
         <img src="/images/image1.png" alt="Logo" class="h-8 sm:h-10 w-auto shrink-0" />
         <div class="leading-tight min-w-0 flex-1">
+          <!-- El título del servicio ya no se edita acá (un input sin rótulo
+               que casi nadie encontraba): tiene su campo en el Documento. -->
           <div class="flex items-baseline gap-2">
             <h1 class="text-lg sm:text-xl font-extrabold tracking-wide text-white/90">Scopes</h1>
-            <input type="text" v-model="state.subheader"
-              class="text-xs sm:text-sm text-white/60 placeholder-white/30 bg-transparent border-b border-transparent hover:border-white/20 focus:border-primary outline-none transition w-full max-w-xs sm:max-w-md px-0" />
           </div>
         </div>
       </div>
@@ -187,6 +187,7 @@ onMounted(() => {
         <img src="/images/image1.png" alt="Logo" class="h-8" />
         <div>
           <h1>Propuesta</h1>
+          <p v-if="state.subheader" class="print-service">{{ state.subheader }}</p>
           <p>{{ state.quoteNumber }}</p>
         </div>
       </div>
@@ -223,7 +224,10 @@ onMounted(() => {
         </div>
       </template>
 
-      <div v-if="state.printSections.economica">
+      <!-- `print-section` es lo que le da formato al título (h3): sin la
+           clase, estos dos títulos salían como texto corriente en el PDF,
+           distintos de las demás secciones y del Word. -->
+      <div v-if="state.printSections.economica" class="print-section">
         <h3>{{ String(state.propuestaSections.length + 1).padStart(2, '0') }} PROPUESTA ECONÓMICA</h3>
         <table class="print-table">
           <thead>
@@ -252,7 +256,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="state.printSections.gantt">
+      <div v-if="state.printSections.gantt" class="print-section">
         <h3>{{ String(state.propuestaSections.length + 2).padStart(2, '0') }} CARTA GANTT</h3>
         <PrintGantt :tasks="state.ganttTasks" :span="state.ganttSpan" :unit="state.ganttUnit" :phases="state.ganttPhases" />
       </div>
@@ -338,6 +342,12 @@ onMounted(() => {
     font-size: 10pt;
     color: var(--color-print-text);
     margin: 0;
+  }
+
+  .print-header p.print-service {
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--color-print-header);
   }
 
   .print-content input,

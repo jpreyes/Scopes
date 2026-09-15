@@ -91,7 +91,10 @@ function statusClass(s) {
             class="border-b border-border hover:bg-surface/50 transition"
             :class="requiereAprobacion(b) ? 'bg-amber-50' : ''">
             <td class="py-2.5 px-3 text-sm font-mono">{{ b.quoteNumber }}</td>
-            <td class="py-2.5 px-3 text-sm">{{ b.client || '-' }}</td>
+            <td class="py-2.5 px-3 text-sm">
+              {{ b.client || '-' }}
+              <span v-if="b.subheader" class="block text-[11px] text-text-dim truncate max-w-[280px]" :title="b.subheader">{{ b.subheader }}</span>
+            </td>
             <td class="py-2.5 px-3 text-sm text-text-muted">{{ b.date || '-' }}</td>
             <td class="py-2.5 px-3 text-center">
               <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full" :class="statusClass(b.status)">

@@ -11,8 +11,12 @@ const { state } = usePresupuesto()
       <div class="mb-6 bg-white/10 backdrop-blur-sm px-8 py-4 rounded-2xl">
         <img src="/images/image1.png" alt="Logo" class="h-14 opacity-90 mx-auto" />
       </div>
-      <h1 class="text-4xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg mb-3">{{ state.subheader || 'Propuesta' }}</h1>
-      <h2 class="text-xl md:text-2xl font-medium opacity-90 mb-4">{{ state.subheader }}</h2>
+      <!-- Tres cosas distintas y rotuladas: el título del servicio, el
+           mandante y el contacto. Antes el título salía dos veces (h1 y h2
+           mostraban el mismo campo) y, vacío, la portada decía solo «Propuesta». -->
+      <p class="text-xs font-semibold tracking-[0.3em] uppercase opacity-70 mb-3">Propuesta técnico-económica</p>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-wide drop-shadow-lg mb-8 max-w-3xl leading-tight">{{ state.subheader || 'Propuesta' }}</h1>
+      <p class="text-[11px] font-semibold tracking-[0.3em] uppercase opacity-60 mb-2">Mandante</p>
       <div class="text-2xl md:text-3xl font-bold tracking-[0.15em] uppercase px-8 py-3 border-2 border-white/30 rounded-xl mb-6">
         {{ state.headerClient || state.clientName || 'CLIENTE' }}
       </div>

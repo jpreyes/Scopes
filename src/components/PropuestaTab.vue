@@ -3,7 +3,52 @@ import { usePresupuesto } from '../stores/presupuesto.js'
 import RichTextEditor from './RichTextEditor.vue'
 import { computed, ref } from 'vue'
 
-const { state, fmt, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections, saveBudget, loadBudget, aprobarPropuesta, enviarARevision, solicitarCambios, enviarACliente, rectificarPropuesta, reenviarACliente, adjudicarPropuesta, rechazarPropuesta, crearProyectoDesdePropuesta } = usePresupuesto()
+// OJO: todo lo que el template llama tiene que estar en esta lista. Faltaban
+// las funciones de la Gantt y los botones «+ Agregar sección» y «+ Tarea» de
+// esta pestaña no hacían nada (Vue no avisa: el click solo tira un error a la consola).
+const { state, fmt, fmtMoney, toast, computed: storeComputed, addProposalItem, removeProposalItem, addPropuestaSection, removePropuestaSection, syncPropuestaSections, saveBudget, loadBudget, aprobarPropuesta, enviarARevision, solicitarCambios, enviarACliente, rectificarPropuesta, reenviarACliente, adjudicarPropuesta, rechazarPropuesta, crearProyectoDesdePropuesta,
+  addGanttTask, addGanttPhase, renameGanttPhase, removeGanttPhase, addCatalogItemToProposal, listVersions, restoreVersion, isFinalNumber } = usePresupuesto()
+
+// El nombre de la sección se aplica al salir del campo (no en cada tecla): las
+// tareas cuelgan de ella por el nombre y hay que moverlas juntas.
+function onRenamePhase(pi, e) {
+  renameGanttPhase(pi, e.target.value)
+  e.target.value = state.ganttPhases[pi] ?? ''
+}
+
+// --- Catálogo → ítems de la propuesta económica ---
+const catalogoAbierto = ref(false)
+const catalogoFiltro = ref('')
+const catalogoFiltrado = computed(() => {
+  const q = catalogoFiltro.value.trim().toLowerCase()
+  const list = state.catalog || []
+  return q ? list.filter(i => ((i.name || '') + ' ' + (i.category || '')).toLowerCase().includes(q)) : list
+})
+
+// --- Historial de versiones ---
+const versionesAbierto = ref(false)
+const versiones = ref([])
+const cargandoVersiones = ref(false)
+
+async function cargarVersiones() {
+  cargandoVersiones.value = true
+  try { versiones.value = await listVersions() }
+  catch (e) { versiones.value = []; toast('No se pudo leer el historial: ' + e.message) }
+  finally { cargandoVersiones.value = false }
+}
+function toggleVersiones() {
+  versionesAbierto.value = !versionesAbierto.value
+  if (versionesAbierto.value) cargarVersiones()
+}
+async function restaurar(v) {
+  const msg = `¿Restaurar la versión guardada por ${v.savedBy || '—'} el ${fmtAprobacion(v.savedAt)}?\n\n`
+    + 'Se reemplazan los textos, ítems, costeo y Carta Gantt. El N.º, el estado y las aprobaciones no cambian. '
+    + 'Lo que tienes ahora queda como una versión más de este historial; lo que no hayas guardado se pierde.'
+  if (!confirm(msg)) return
+  try { await restoreVersion(v.id) } catch (e) { toast('No se pudo restaurar: ' + e.message) }
+  cargarVersiones()
+}
+const statusLabel = s => (STATUS_OPTS.find(o => o.value === s) || {}).label || s || '—'
 
 function onStatusChange(e) {
   const nuevo = e.target.value
@@ -99,6 +144,18 @@ function ganttBarStyle(t) {
 
 <template>
   <div>
+    <!-- Título del servicio: campo propio, distinto del mandante (bloque
+         CLIENTE) y del contacto. Antes vivía en un input sin rótulo en la
+         cabecera de la app y casi nadie lo llenaba, así que la portada no
+         tenía título. -->
+    <div class="bg-gradient-to-r from-gray-50 to-white border border-border/80 rounded-xl px-5 py-3.5 mb-4 shadow-sm">
+      <label class="block text-[11px] font-bold text-text tracking-wider uppercase mb-1" for="titulo-servicio">Título del servicio</label>
+      <input id="titulo-servicio" type="text" v-model="state.subheader"
+        placeholder="Ej: Inspección estructural de losa — Edificio Corporativo"
+        class="w-full border border-border rounded-lg px-3 py-1.5 text-base font-semibold focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition bg-surface" />
+      <p class="mt-1 text-[10px] text-text-dim">Es el título de la portada. El mandante sale del bloque Cliente y el contacto, del campo de abajo.</p>
+    </div>
+
     <!-- Reference row -->
     <div class="flex flex-wrap gap-y-2 justify-between items-center bg-gradient-to-r from-gray-50 to-white border border-border/80 rounded-xl px-5 py-3.5 mb-4 shadow-sm">
       <div class="flex items-center gap-2 text-sm">
@@ -106,13 +163,45 @@ function ganttBarStyle(t) {
         <input type="text" v-model="state.contactPerson" class="border border-border rounded-lg px-2.5 py-1 text-sm w-48 sm:w-56 focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition" placeholder="Nombre contacto" />
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xl sm:text-2xl font-extrabold text-text tracking-wider">{{ state.quoteNumber }}</span>
+        <div class="flex flex-col items-end leading-tight">
+          <span class="text-xl sm:text-2xl font-extrabold text-text tracking-wider">{{ state.quoteNumber }}</span>
+          <span v-if="!isFinalNumber(state.quoteNumber)" class="text-[10px] font-semibold text-amber-600"
+            title="La propuesta conserva este N.º en todas sus modificaciones. El correlativo CT-PS definitivo se asigna al aprobarse.">
+            N.º provisorio · el definitivo se asigna al aprobarse
+          </span>
+        </div>
         <span class="text-border mx-1 hidden sm:inline">|</span>
-        <div class="flex gap-1.5">
+        <div class="flex gap-1.5 flex-wrap">
           <button @click="saveBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition cursor-pointer">Guardar</button>
+          <button @click="toggleVersiones" :disabled="!state.quoteId"
+            :title="state.quoteId ? 'Ver y restaurar versiones anteriores' : 'Guarda la propuesta para empezar su historial'"
+            class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            :class="versionesAbierto ? 'bg-text text-surface border-text' : 'bg-bg-app text-text-muted border-border hover:bg-surface hover:text-text'">Versiones</button>
           <button @click="loadBudget" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-bg-app text-text-muted border border-border hover:bg-surface hover:text-text transition cursor-pointer">Cargar</button>
           <button @click="exportar('pdf')" :disabled="!!exportando" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-text text-surface hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'pdf' ? 'Generando…' : 'PDF' }}</button>
           <button @click="exportar('word')" :disabled="!!exportando" class="px-2.5 py-1 text-[10px] sm:text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer disabled:opacity-50 disabled:cursor-wait">{{ exportando === 'word' ? 'Generando…' : 'Word' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historial de versiones: el servidor guarda una por cada guardado que
+         cambió algo (las últimas 40). -->
+    <div v-if="versionesAbierto" class="mb-4 bg-surface border border-border/80 rounded-xl shadow-sm">
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-border">
+        <h3 class="text-[11px] font-bold text-text uppercase tracking-wider">Historial de versiones</h3>
+        <button @click="versionesAbierto = false" class="text-text-dim hover:text-text text-sm px-1 cursor-pointer" title="Cerrar">&times;</button>
+      </div>
+      <p v-if="cargandoVersiones" class="px-4 py-3 text-xs text-text-dim">Cargando…</p>
+      <p v-else-if="!versiones.length" class="px-4 py-3 text-xs text-text-dim">Todavía no hay versiones: se crean desde el próximo guardado.</p>
+      <div v-else class="max-h-72 overflow-y-auto">
+        <div v-for="(v, i) in versiones" :key="v.id"
+          class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 border-b border-border-light last:border-b-0 text-xs">
+          <span class="font-semibold text-text whitespace-nowrap">{{ fmtAprobacion(v.savedAt) }}</span>
+          <span class="text-text-muted">{{ v.savedBy || '—' }}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-bg-app text-text-muted">{{ statusLabel(v.status) }}</span>
+          <span class="text-text-muted font-mono">{{ fmtMoney(v.total, v.currency) }} + IVA</span>
+          <span v-if="i === 0" class="ml-auto text-[10px] font-bold text-emerald-700">Actual</span>
+          <button v-else @click="restaurar(v)" class="ml-auto px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-bg-app text-text border border-border hover:bg-primary hover:text-white hover:border-primary transition cursor-pointer">Restaurar</button>
         </div>
       </div>
     </div>
@@ -301,7 +390,30 @@ function ganttBarStyle(t) {
           </tbody>
         </table>
       </div>
-      <button @click="addProposalItem" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar item</button>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button @click="addProposalItem" class="px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar item</button>
+        <button @click="catalogoAbierto = !catalogoAbierto" class="px-3 py-1.5 text-xs border rounded-lg transition cursor-pointer"
+          :class="catalogoAbierto ? 'bg-primary text-white border-primary' : 'text-primary border-primary-border hover:bg-primary-light'">+ Desde catálogo</button>
+      </div>
+      <div v-if="catalogoAbierto" class="mt-2 border border-border rounded-xl bg-surface shadow-sm">
+        <div class="p-2 border-b border-border">
+          <input v-model="catalogoFiltro" type="search" placeholder="Buscar producto o categoría…"
+            class="w-full px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-bg-app" />
+        </div>
+        <p v-if="!state.catalog.length" class="px-3 py-3 text-xs text-text-dim">El catálogo está vacío. Los productos se crean en la sección Catálogo.</p>
+        <p v-else-if="!catalogoFiltrado.length" class="px-3 py-3 text-xs text-text-dim">Nada coincide con «{{ catalogoFiltro }}».</p>
+        <div v-else class="max-h-64 overflow-y-auto">
+          <button v-for="c in catalogoFiltrado" :key="c.id" @click="addCatalogItemToProposal(c)"
+            class="w-full flex items-center gap-3 px-3 py-2 text-left border-b border-border-light last:border-b-0 hover:bg-primary-light/60 transition cursor-pointer">
+            <span class="text-primary font-bold text-sm leading-none">+</span>
+            <span class="flex-1 min-w-0">
+              <span class="block text-sm text-text truncate">{{ c.name }}</span>
+              <span v-if="c.category" class="block text-[10px] text-text-dim">{{ c.category }}</span>
+            </span>
+            <span class="text-xs font-semibold text-text whitespace-nowrap">{{ fmt(c.price || 0) }} <span class="font-normal text-text-dim">/ {{ c.unit || 'und' }}</span></span>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- Totals -->
@@ -348,11 +460,14 @@ function ganttBarStyle(t) {
             </tr>
           </thead>
           <tbody>
-            <template v-for="(phase, pi) in state.ganttPhases" :key="phase">
+            <!-- key por posición y no por nombre: con el nombre como key, cada
+                 tecla cambiaba la key y Vue rehacía la fila, así que el campo
+                 perdía el foco tras la primera letra. -->
+            <template v-for="(phase, pi) in state.ganttPhases" :key="pi">
               <tr class="bg-surface/80">
                 <td class="py-2 px-3 font-bold text-text text-xs sticky left-0 bg-surface/80 z-10">
                   <div class="flex items-center justify-between gap-2">
-                    <input type="text" v-model="state.ganttPhases[pi]"
+                    <input type="text" :value="phase" @change="onRenamePhase(pi, $event)" @keydown.enter="$event.target.blur()"
                       class="bg-transparent border-b border-dashed border-border outline-none focus:border-primary text-xs font-bold flex-1 min-w-0" />
                     <button @click="removeGanttPhase(pi)" class="text-danger hover:text-red-600 text-sm px-1 shrink-0 transition cursor-pointer" title="Eliminar fase">&times;</button>
                   </div>

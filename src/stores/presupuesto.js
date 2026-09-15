@@ -4,7 +4,39 @@ import * as pb from './pocketbase.js'
 
 let _key = 0
 const uid = () => ++_key
+// Los ids de secciones, tareas e ítems se guardan con la propuesta. Al cargar
+// hay que llevar el contador por encima de todos ellos, o la próxima sección o
+// tarea nueva nace con el id de una que ya existe.
+function bumpUid(values) {
+  for (const v of values) {
+    const n = Number(v)
+    if (Number.isFinite(n) && n > _key) _key = n
+  }
+}
+function normalizeIds(list, field) {
+  const seen = new Set()
+  for (const x of list) {
+    if (x[field] === undefined || x[field] === null || x[field] === '' || seen.has(x[field])) x[field] = uid()
+    seen.add(x[field])
+  }
+  return list
+}
 let toastTimer = null
+
+// --- Numeración ---
+// Una propuesta nace con un N.º provisorio (PROV-XXXXXX) que conserva en todas
+// sus modificaciones. El correlativo final CT-PS-NNN-AAAA lo asigna el SERVIDOR
+// (pb_hooks/lib/quotes.js) cuando la propuesta queda aprobada. Antes el
+// contador vivía en el localStorage de cada navegador y avanzaba en cada
+// «Guardar»: cada guardado creaba una copia con otro número, y dos personas
+// podían sacar el mismo número y pisarse la propuesta una a la otra.
+const FINAL_NUMBER = /^CT-PS-\d+-\d{4}$/
+function provisionalNumber() {
+  const t = Date.now().toString(36).slice(-3)
+  const r = Math.random().toString(36).slice(2, 5).padEnd(3, '0')
+  return ('PROV-' + t + r).toUpperCase()
+}
+function isFinalNumber(qn) { return FINAL_NUMBER.test(qn || '') }
 
 function toast(msg) {
   state.toast = msg
@@ -83,7 +115,10 @@ const state = reactive({
     { id: 'costeo', label: 'Costeo Interno' },
   ],
 
-  quoteNumber: 'CT-PS-001-2026',
+  // `quoteId` es el id del registro en PocketBase: se guarda por id, nunca por
+  // N.º. Vacío = propuesta que todavía no llega al servidor.
+  quoteId: '',
+  quoteNumber: provisionalNumber(),
   quoteRev: '01',
   quoteDate: '',
   validUntil: '',
@@ -127,6 +162,7 @@ const state = reactive({
   taxRate: 19,
   aprobaciones: [],
   createdBy: '',
+  createdAt: '',
   ultimoTotalEnviado: 0,
 
   costeoMarkup: 20,
@@ -164,8 +200,11 @@ async function dbLogin() {
   try {
     state.user = await pb.refreshUser()
     state.dbConnected = true
+    // Ya no corre `dedupeQuotes()`: borraba en silencio, en cada login, toda
+    // propuesta que compartiera N.º con otra — y dos propuestas distintas
+    // compartían N.º justamente por el contador por navegador. Ahora el N.º es
+    // único en el servidor.
     migrateLocalToPB()
-    dedupeQuotes()
     migrarEstadosViejos()
   } catch (e) {
     // Solo un rechazo del servidor cierra la sesión. Un fallo de red no: el
@@ -194,54 +233,31 @@ async function migrarEstadosViejos() {
   } catch (_) { /* best-effort */ }
 }
 
-async function dedupeQuotes() {
-  if (!state.dbConnected) return
-  try {
-    const quotes = await pb.getQuotes()
-    const byNum = {}
-    quotes.forEach(q => {
-      if (!q.quoteNumber) return
-      ;(byNum[q.quoteNumber] = byNum[q.quoteNumber] || []).push(q)
-    })
-    const score = r => {
-      let s = 0
-      ;(r.proposalItems || []).forEach(i => { if (Number(i.price) > 0) s += 2 })
-      ;(r.propuestaSections || []).forEach(sec => { if (sec.content) s += 2 })
-      if (r.awardAmount) s += 1
-      if (r.proposalStatus) s += 1
-      return s
-    }
-    let removed = 0
-    for (const group of Object.values(byNum)) {
-      if (group.length < 2) continue
-      group.sort((a, b) => score(b) - score(a))
-      for (const dup of group.slice(1)) {
-        await pb.deleteQuote(dup.id).catch(() => {})
-        removed++
-      }
-    }
-    if (removed) { loadHistorial(); loadDashboardData() }
-  } catch (_) { /* best-effort */ }
-}
-
 async function migrateLocalToPB() {
   try {
-    const [pbQuotes, pbClients, pbCatalog] = await Promise.all([
-      pb.getQuotes().catch(() => []),
+    const [pbClients, pbCatalog] = await Promise.all([
       pb.getClients().catch(() => []),
       pb.getCatalog().catch(() => []),
     ])
-    const pbQuoteNums = new Set(pbQuotes.map(q => q.quoteNumber).filter(Boolean))
     const pbClientKeys = new Set(pbClients.map(c => c.name + '|' + (c.email || '')))
     const pbCatalogKeys = new Set(pbCatalog.map(c => c.name))
 
-    // Migrate local budgets not in PB
+    // Solo sube las propuestas guardadas SIN conexión (`_pending`). Antes subía
+    // cualquier copia local cuyo N.º no estuviera en el servidor, y cada
+    // navegador guarda copia de todo lo que abrió: una propuesta borrada por
+    // otra persona, o renumerada al aprobarse, volvía a aparecer.
     const localList = JSON.parse(localStorage.getItem('presto_list') || '[]')
     for (const item of localList) {
-      if (pbQuoteNums.has(item.quoteNumber)) continue
-      const key = 'presto_' + item.quoteNumber.replace(/\//g, '_')
-      const data = JSON.parse(localStorage.getItem(key))
-      if (data) await pb.saveQuote(data).catch(() => {})
+      const data = readLocal(item.quoteNumber)
+      if (!data || !data._pending) continue
+      const body = { ...data }
+      delete body._pending
+      try {
+        const saved = body.id && body.id.length === 15
+          ? await pb.updateQuote(body.id, body)
+          : await pb.createQuote(body)
+        writeLocal(saved, item.quoteNumber)
+      } catch (_) { /* queda pendiente para el próximo login */ }
     }
 
     // Migrate local clients not in PB
@@ -447,16 +463,30 @@ function syncSelectedToProposal() {
   state.activeTab = 'propuesta'
 }
 
-function generateQuoteNumber() {
-  const saved = JSON.parse(localStorage.getItem('presto_counter') || '0')
-  const n = saved + 1
-  state.quoteNumber = `CT-PS-${String(n).padStart(3, '0')}-${new Date().getFullYear()}`
-  localStorage.setItem('presto_counter', JSON.stringify(n))
+const lsKey = qn => 'presto_' + String(qn).replace(/\//g, '_')
+function readLocal(qn) {
+  try { return JSON.parse(localStorage.getItem(lsKey(qn)) || 'null') } catch (_) { return null }
+}
+// localStorage es solo respaldo: si se llena (las imágenes van en base64), el
+// guardado en el servidor no puede caerse por eso.
+function writeLocal(data, oldNumber) {
+  try {
+    let list = JSON.parse(localStorage.getItem('presto_list') || '[]')
+    if (oldNumber && oldNumber !== data.quoteNumber) {
+      localStorage.removeItem(lsKey(oldNumber))
+      list = list.filter(x => x.quoteNumber !== oldNumber)
+    }
+    if (!list.find(x => x.quoteNumber === data.quoteNumber)) {
+      list.push({ quoteNumber: data.quoteNumber, client: data.clientName || data.client, date: data.quoteDate, savedAt: new Date().toISOString() })
+    }
+    localStorage.setItem('presto_list', JSON.stringify(list))
+    localStorage.setItem(lsKey(data.quoteNumber), JSON.stringify(data))
+  } catch (_) { /* cuota llena */ }
 }
 
 function resetBudget() {
   const defaults = {
-    quoteNumber: '', quoteRev: '01', quoteDate: new Date().toISOString().slice(0, 10), validUntil: '',
+    quoteId: '', quoteNumber: provisionalNumber(), quoteRev: '01', quoteDate: new Date().toISOString().slice(0, 10), validUntil: '',
     proposalStatus: 'borrador', awardAmount: null, projectNotes: '',
     currency: '$', contactPerson: '',
     clientName: '', clientAddr: '', clientPhone: '', clientEmail: '',
@@ -473,7 +503,7 @@ function resetBudget() {
     ],
     proposalItems: [{ desc: '', qty: 1, price: 0 }],
     aprobaciones: [],
-    createdBy: '',
+    createdBy: '', createdAt: '',
     ultimoTotalEnviado: 0,
     costeoCategories: [],
     costeoGroups: [],
@@ -486,7 +516,6 @@ function resetBudget() {
   // Preserve company info
   const company = { company: state.company, companyAddr: state.companyAddr, companyPhone: state.companyPhone, companyEmail: state.companyEmail, companyResp: state.companyResp, companyRespSig: state.companyRespSig }
   Object.assign(state, defaults, company)
-  generateQuoteNumber()
   state.propuestaSections.forEach(s => { if (state.printSections[s.id] === undefined) state.printSections[s.id] = true })
 }
 
@@ -524,51 +553,156 @@ function collectData() {
   }
 }
 
+// Guardar ya no avanza el N.º: una propuesta es el mismo registro de principio
+// a fin, y el N.º final le llega recién al aprobarse.
 function saveBudget() {
-  persistBudget()
-  generateQuoteNumber()
+  return persistBudget()
 }
 
-function persistBudget() {
-  const key = 'presto_' + state.quoteNumber.replace(/\//g, '_')
-  const prevLS = JSON.parse(localStorage.getItem(key) || 'null')
-  const data = withTrace(collectData(), prevLS)
-  state.createdBy = data.createdBy
-  let list = JSON.parse(localStorage.getItem('presto_list') || '[]')
-  if (!list.find(x => x.quoteNumber === data.quoteNumber)) {
-    list.push({ quoteNumber: data.quoteNumber, client: data.clientName || data.client, date: data.quoteDate, savedAt: new Date().toISOString() })
-    localStorage.setItem('presto_list', JSON.stringify(list))
+// Contenido = todo lo que no es flujo (estado, votos, N.º, trazabilidad). Sirve
+// para saber si otra persona cambió la propuesta o solo votó.
+const CONTENT_KEYS = [
+  'quoteRev', 'quoteDate', 'validUntil', 'currency', 'contactPerson', 'projectNotes',
+  'company', 'companyAddr', 'companyPhone', 'companyEmail', 'companyResp', 'companyRespSig',
+  'clientName', 'clientAddr', 'clientPhone', 'clientEmail', 'clientResp', 'clientRespSig',
+  'headerClient', 'subheader', 'propuestaSections', 'proposalItems', 'taxRate',
+  'costeoMarkup', 'costeoMarginMode', 'costeo', 'costeoGroups', 'printSections',
+  'ganttPhases', 'ganttUnit', 'ganttSpan', 'ganttTasks',
+]
+function stable(v) {
+  if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']'
+  if (v && typeof v === 'object') {
+    return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort()
+      .map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}'
   }
-  localStorage.setItem(key, JSON.stringify(data))
-  if (state.dbConnected) {
-    pb.getQuoteByNum(data.quoteNumber)
-      .then(prev => {
-        const final = withTrace(data, prev)
-        localStorage.setItem(key, JSON.stringify(final))
-        return pb.saveQuote(final).catch(() => {})
-      })
-      .catch(() => pb.saveQuote(data).catch(() => {}))
-      .finally(() => { loadHistorial(); loadDashboardData() })
-  } else {
+  return JSON.stringify(v ?? null)
+}
+function contentSig(rec) { return stable(CONTENT_KEYS.map(k => rec[k] ?? null)) }
+
+const createdIds = {}      // N.º provisorio → id: dos «Guardar» seguidos no crean dos registros
+const knownUpdatedAt = {}  // id → `updatedAt` de lo que este navegador cargó o guardó por última vez
+const loadedSig = {}       // id → firma del contenido de eso mismo
+function rememberLoaded(rec) {
+  knownUpdatedAt[rec.id] = rec.updatedAt || ''
+  loadedSig[rec.id] = contentSig(rec)
+}
+
+function hhmm(iso) {
+  const d = new Date(iso)
+  if (isNaN(d)) return ''
+  return d.toLocaleDateString('es-CL') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+}
+
+let saveChain = Promise.resolve()
+
+// Los guardados van en fila: el segundo espera al primero, que es el que trae
+// el id del registro recién creado. El aviso de éxito sale cuando el servidor
+// confirmó, no antes: antes decía «Guardado ✓» aunque el servidor rechazara.
+function persistBudget(okMsg = 'Guardado ✓') {
+  const snap = collectData()
+  const ref = { id: state.quoteId, number: state.quoteNumber }
+  const run = saveChain.then(() => doPersist(snap, ref, okMsg))
+  saveChain = run.catch(() => {})
+  return run
+}
+
+async function doPersist(snap, ref, okMsg) {
+  const user = who()
+  const now = new Date().toISOString()
+  const isOpen = id => (id && state.quoteId === id) || (!state.quoteId && state.quoteNumber === ref.number)
+
+  if (!state.dbConnected) {
+    const id = ref.id || createdIds[ref.number] || undefined
+    const prev = readLocal(ref.number)
+    writeLocal({
+      ...snap, id,
+      createdBy: prev?.createdBy || state.createdBy || user, createdAt: prev?.createdAt || state.createdAt || now,
+      updatedBy: user, updatedAt: now, _pending: true,
+    })
+    if (isOpen(id) && !state.createdBy) { state.createdBy = user; state.createdAt = now }
+    loadHistorial(); loadDashboardData()
+    toast(okMsg + ' (sin conexión: se sube al volver)')
+    return null
+  }
+
+  let id = ref.id || createdIds[ref.number] || ''
+  try {
+    if (id) {
+      const cur = await pb.getQuote(id, 'id,updatedAt,updatedBy').catch(e => { if (e.status === 404) return null; throw e })
+      if (!cur) {
+        id = '' // la borraron mientras estaba abierta: guardar la vuelve a crear
+      } else if (knownUpdatedAt[id] && cur.updatedAt && cur.updatedAt !== knownUpdatedAt[id]) {
+        const ok = confirm(`${cur.updatedBy || 'Otra persona'} guardó esta propuesta el ${hhmm(cur.updatedAt)}, después de que la abriste.\n\n`
+          + 'Si guardas ahora, tus cambios reemplazan los suyos (los suyos quedan en el historial de versiones).\n\n¿Guardar igual?')
+        if (!ok) { toast('No se guardó'); return null }
+      }
+    }
+    // `createdBy`/`createdAt` se mandan solo al crear; al actualizar los
+    // conserva el servidor (pb_hooks/lib/quotes.js), que además pone
+    // `updatedBy` desde la sesión.
+    let saved
+    if (id) {
+      saved = await pb.updateQuote(id, { ...snap, updatedBy: user, updatedAt: now })
+    } else {
+      saved = await pb.createQuote({ ...snap, createdBy: user, createdAt: now, updatedBy: user, updatedAt: now })
+      createdIds[ref.number] = saved.id
+    }
+    rememberLoaded(saved)
+    if (isOpen(saved.id)) {
+      state.quoteId = saved.id
+      state.quoteNumber = saved.quoteNumber
+      state.createdBy = saved.createdBy || ''
+      state.createdAt = saved.createdAt || ''
+    }
+    writeLocal(saved, ref.number)
+    const numerada = saved.quoteNumber !== ref.number && isFinalNumber(saved.quoteNumber)
+    toast(numerada ? `${okMsg} — N.º asignado: ${saved.quoteNumber}` : okMsg)
+    return saved
+  } catch (e) {
+    console.error('[guardar]', e)
+    toast('No se pudo guardar: ' + (e.message || 'error del servidor'))
+    return null
+  } finally {
     loadHistorial()
     loadDashboardData()
   }
-  toast('Guardado ✓')
 }
 
-function aprobarPropuesta() {
+async function aprobarPropuesta() {
   const user = who()
   if (state.proposalStatus !== 'en_revision') { toast('Solo se puede aprobar cuando está en revisión'); return }
+  // Antes de votar se mira el servidor: otro revisor pudo votar, o alguien
+  // cambiar el contenido, mientras esta pestaña estaba abierta. Votar sobre la
+  // copia vieja borraba el voto del otro al guardar.
+  const id = state.quoteId
+  if (state.dbConnected && id) {
+    let cur = null
+    try { cur = await pb.getQuote(id) } catch (_) { /* sin red: se vota con lo que hay */ }
+    if (cur && cur.updatedAt !== knownUpdatedAt[id]) {
+      if (contentSig(cur) !== loadedSig[id]) {
+        applyIdentity(cur); applyContent(cur); rememberLoaded(cur)
+        toast(`${cur.updatedBy || 'Otra persona'} cambió la propuesta mientras la tenías abierta. Se recargó: revísala y vuelve a aprobar.`)
+        return
+      }
+      const ya = new Set(state.aprobaciones.map(a => a.by))
+      ;(cur.aprobaciones || []).forEach(a => { if (!ya.has(a.by)) state.aprobaciones.push({ ...a }) })
+      if (cur.proposalStatus !== 'en_revision') {
+        applyIdentity(cur); rememberLoaded(cur)
+        toast('La propuesta ya no está en revisión: ' + (STATUS_LABELS[cur.proposalStatus] || cur.proposalStatus))
+        return
+      }
+      knownUpdatedAt[id] = cur.updatedAt
+    }
+  }
   if (state.aprobaciones.some(a => a.by === user)) { toast('Ya aprobaste esta propuesta'); return }
   if (state.createdBy && state.createdBy === user) { toast('El creador no puede aprobar su propia propuesta'); return }
   state.aprobaciones.push({ by: user, at: new Date().toISOString() })
   if (aprobacionInfo.value.count >= 2) {
     state.proposalStatus = 'aprobada'
-    toast('Propuesta aprobada por la revisión interna ✓')
+    persistBudget('Propuesta aprobada por la revisión interna ✓')
   } else {
-    toast('Aprobación registrada (' + aprobacionInfo.value.count + '/2)')
+    persistBudget('Aprobación registrada (' + aprobacionInfo.value.count + '/2)')
   }
-  persistBudget()
 }
 
 // --- Transiciones de estado ---
@@ -578,72 +712,64 @@ function enviarARevision() {
   if (desde !== 'borrador' && desde !== 'modificacion' && desde !== 'rectificacion') return
   if (desde === 'modificacion' || desde === 'rectificacion') state.aprobaciones = []
   state.proposalStatus = 'en_revision'
-  persistBudget()
-  toast('Propuesta enviada a revisión interna ✓')
+  persistBudget('Propuesta enviada a revisión interna ✓')
 }
 
 function solicitarCambios() {
   if (state.proposalStatus !== 'en_revision') return
   state.aprobaciones = []
   state.proposalStatus = 'modificacion'
-  persistBudget()
-  toast('Se solicitaron cambios al creador')
+  persistBudget('Se solicitaron cambios al creador')
 }
 
 function enviarACliente() {
   if (state.proposalStatus !== 'aprobada') return
   state.ultimoTotalEnviado = proposalTotal.value
   state.proposalStatus = 'enviada'
-  persistBudget()
-  toast('Propuesta enviada al cliente ✓')
+  persistBudget('Propuesta enviada al cliente ✓')
 }
 
 function rectificarPropuesta() {
   if (state.proposalStatus !== 'enviada') return
   state.proposalStatus = 'rectificacion'
-  persistBudget()
-  toast('Rectificación del cliente registrada')
+  persistBudget('Rectificación del cliente registrada')
 }
 
+// Se compara contra el total que efectivamente se le mandó al cliente
+// (`ultimoTotalEnviado`). Contra el registro guardado no servía: bastaba con
+// apretar «Guardar» antes de reenviar para que el monto nuevo pasara sin revisión.
 async function reenviarACliente() {
   if (state.proposalStatus !== 'rectificacion') return
   const totalActual = proposalTotal.value
-  let totalPrev = null
-  if (state.dbConnected) {
+  let totalPrev = state.ultimoTotalEnviado || null
+  if (totalPrev === null && state.dbConnected && state.quoteId) {
     try {
-      const prev = await pb.getQuoteByNum(state.quoteNumber)
-      if (prev) totalPrev = (prev.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+      const prev = await pb.getQuote(state.quoteId, 'proposalItems,taxRate')
+      const sub = (prev.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
+      totalPrev = sub * (1 + (Number(prev.taxRate) || 0) / 100)
     } catch (_) {}
-  }
-  if (totalPrev === null) {
-    const key = 'presto_' + state.quoteNumber.replace(/\//g, '_')
-    const prev = JSON.parse(localStorage.getItem(key) || 'null')
-    if (prev) totalPrev = (prev.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
   }
   if (totalPrev !== null && Math.abs(totalActual - totalPrev) > 0.01) {
     state.aprobaciones = []
     state.proposalStatus = 'en_revision'
-    persistBudget()
-    toast('El monto cambió — requiere nueva revisión interna')
+    persistBudget('El monto cambió — requiere nueva revisión interna')
     return
   }
+  state.ultimoTotalEnviado = totalActual
   state.proposalStatus = 'enviada'
-  persistBudget()
-  toast('Propuesta reenviada al cliente ✓')
+  persistBudget('Propuesta reenviada al cliente ✓')
 }
 
 function adjudicarPropuesta() {
   if (state.proposalStatus !== 'enviada') return
   state.proposalStatus = 'adjudicada'
-  persistBudget()
-  toast('Propuesta adjudicada ✓')
+  persistBudget('Propuesta adjudicada ✓')
 }
 
 function rechazarPropuesta() {
   if (state.proposalStatus !== 'enviada') return
   state.proposalStatus = 'rechazada'
-  persistBudget()
-  toast('Propuesta rechazada')
+  persistBudget('Propuesta rechazada')
 }
 
 const aprobacionInfo = computed(() => {
@@ -663,31 +789,35 @@ const ESTADOS_YA_APROBADOS = ['aprobada', 'enviada', 'rectificacion', 'adjudicad
 const aprobadaInternamente = computed(() =>
   aprobacionInfo.value.count >= 2 || ESTADOS_YA_APROBADOS.includes(state.proposalStatus))
 
-async function loadBudgetByNum(qn) {
-  let data = null
-  if (state.dbConnected) {
-    try {
-      const pbRecord = await pb.getQuoteByNum(qn)
-      if (pbRecord) {
-        data = { ...pbRecord }
-        if (data.clientName && !data.client) data.client = data.clientName
-      }
-    } catch (_) { /* fallback to localStorage */ }
-  }
-  if (!data) {
-    const key = 'presto_' + qn.replace(/\//g, '_')
-    data = JSON.parse(localStorage.getItem(key))
-  }
-  if (!data) return
+// Lo que identifica a la propuesta y su flujo: N.º, estado, votos, autoría.
+function applyIdentity(data) {
   Object.assign(state, {
-    quoteNumber: data.quoteNumber || '',
+    quoteId: data.id && String(data.id).length === 15 ? data.id : '',
+    quoteNumber: data.quoteNumber || provisionalNumber(),
+    proposalStatus: data.proposalStatus || 'borrador',
+    awardAmount: data.awardAmount || null,
+    aprobaciones: (data.aprobaciones || []).map(a => ({ ...a })),
+    createdBy: data.createdBy || '',
+    createdAt: data.createdAt || '',
+    ultimoTotalEnviado: data.ultimoTotalEnviado || 0,
+  })
+}
+
+// Reemplaza TODO el contenido del editor. Antes el costeo, los grupos y la
+// Gantt solo se reemplazaban si la propuesta cargada los traía —y el costeo,
+// solo en las categorías que coincidieran por id con las que ya había en
+// pantalla—: lo que no calzaba quedaba de la propuesta abierta antes y, al
+// guardar, se escribía encima. Además los ítems del costeo recibían un `_key`
+// nuevo en cada carga, y los grupos, que los referencian por `_key`, quedaban
+// apuntando a ítems que ya no existían. Así aparecía «otro costeo montado» en
+// una propuesta que nadie había tocado.
+function applyContent(data) {
+  Object.assign(state, {
     quoteRev: data.quoteRev || '01',
     quoteDate: data.quoteDate || '',
     validUntil: data.validUntil || '',
     currency: data.currency || '$',
     contactPerson: data.contactPerson || '',
-    proposalStatus: data.proposalStatus || 'borrador',
-    awardAmount: data.awardAmount || null,
     projectNotes: data.projectNotes || '',
     company: data.company || '', companyAddr: data.companyAddr || '',
     companyPhone: data.companyPhone || '', companyEmail: data.companyEmail || '',
@@ -698,43 +828,66 @@ async function loadBudgetByNum(qn) {
     headerClient: data.headerClient || '',
     subheader: data.subheader || '',
     proposalItems: (data.proposalItems || []).map(x => ({ ...x })),
-    taxRate: data.taxRate || 19,
-    aprobaciones: (data.aprobaciones || []).map(a => ({ ...a })),
-    createdBy: data.createdBy || '',
-    ultimoTotalEnviado: data.ultimoTotalEnviado || 0,
-    costeoMarkup: data.costeoMarkup || 20,
+    // `??` y no `||`: un IVA o un margen en 0 es un valor, no un vacío.
+    taxRate: data.taxRate ?? 19,
+    costeoMarkup: data.costeoMarkup ?? 20,
     costeoMarginMode: data.costeoMarginMode || 'venta',
   })
-  // migrate old budgets without propuestaSections
+
+  let sections
   if (data.propuestaSections && data.propuestaSections.length) {
-    state.propuestaSections = data.propuestaSections.map(s => ({ ...s }))
+    sections = data.propuestaSections.map(s => ({ ...s }))
   } else {
+    // propuestas anteriores a las secciones libres
     const oldLabels = ['PRESENTACIÓN', 'SERVICIO', 'OBJETIVO', 'ALCANCE DEL SERVICIO', 'VENTAJAS Y DIFERENCIADORES', 'NOTAS / CONDICIONES', 'ENTREGABLES']
     const oldKeys = ['presentacion', 'servicio', 'objetivo', 'alcance', 'ventajas', 'notes', 'entregables']
-    state.propuestaSections = oldLabels.map((l, i) => ({ id: uid(), label: l, content: data[oldKeys[i]] || '' }))
+    sections = oldLabels.map((l, i) => ({ id: null, label: l, content: data[oldKeys[i]] || '' }))
   }
-  state.printSections = data.printSections || {}
-  // ensure each section has a printSection entry
-  state.propuestaSections.forEach(s => {
-    if (state.printSections[s.id] === undefined) state.printSections[s.id] = true
-  })
+  const costeo = (Array.isArray(data.costeo) ? data.costeo : []).map(c => ({
+    id: c.id, label: c.label, items: (c.items || []).map(i => ({ ...i })),
+  }))
+  const items = costeo.flatMap(c => c.items)
+  const groups = (data.costeoGroups || []).map(g => ({ ...g, itemKeys: [...(g.itemKeys || [])] }))
+  const tasks = (data.ganttTasks || []).map(t => ({ ...t }))
+
+  bumpUid([...sections.map(s => s.id), ...items.map(i => i._key), ...groups.map(g => g.id), ...tasks.map(t => t.id), ...costeo.map(c => c.id)])
+  normalizeIds(sections, 'id')
+  normalizeIds(items, '_key')
+  normalizeIds(groups, 'id')
+  normalizeIds(tasks, 'id')
+
+  state.propuestaSections = sections
+  state.printSections = { ...(data.printSections || {}) }
+  sections.forEach(s => { if (state.printSections[s.id] === undefined) state.printSections[s.id] = true })
+  if (state.printSections.economica === undefined) state.printSections.economica = true
+  if (state.printSections.gantt === undefined) state.printSections.gantt = true
+
+  state.costeoCategories = costeo
+  state.costeoGroups = groups
+
+  const phases = data.ganttPhases && data.ganttPhases.length ? [...data.ganttPhases] : ['CAPTURA DE DATOS', 'ANÁLISIS DE DATOS']
+  // Tareas cuya sección ya no existe: quedaron así al renombrar una sección
+  // con el editor viejo. Se les devuelve su sección en vez de dejarlas ocultas.
+  tasks.forEach(t => { if (t.phase && !phases.includes(t.phase)) phases.push(t.phase) })
+  state.ganttPhases = phases
+  state.ganttUnit = data.ganttUnit || 'day'
+  state.ganttSpan = data.ganttSpan || 14
+  state.ganttTasks = tasks
+
   if (!state.proposalItems.length) addProposalItem()
-  if (data.costeo) {
-    state.costeoCategories.forEach(cat => {
-      const saved = data.costeo.find(c => c.id === cat.id)
-      if (saved && saved.items.length) cat.items = saved.items.map(i => ({ ...i, _key: uid() }))
-    })
-  }
-  if (data.costeoGroups) {
-    state.costeoGroups = data.costeoGroups.map(g => ({ ...g, id: uid() }))
-  }
-  if (data.ganttTasks) {
-    state.ganttPhases = data.ganttPhases && data.ganttPhases.length ? [...data.ganttPhases] : ['CAPTURA DE DATOS', 'ANÁLISIS DE DATOS']
-    state.ganttUnit = data.ganttUnit || 'day'
-    state.ganttSpan = data.ganttSpan || 14
-    state.ganttTasks = data.ganttTasks.map(t => ({ ...t, id: uid() }))
-  }
   state.loadVersion++
+}
+
+async function loadBudgetByNum(qn) {
+  let data = null
+  if (state.dbConnected) {
+    try { data = await pb.getQuoteByNum(qn) } catch (_) { /* sin red: copia local */ }
+  }
+  if (!data) data = readLocal(qn)
+  if (!data) { toast('No se encontró la propuesta ' + qn); return }
+  applyIdentity(data)
+  applyContent(data)
+  if (state.quoteId) rememberLoaded(data)
   state.activeTab = 'propuesta'
 }
 
@@ -764,7 +917,8 @@ function loadHistorial() {
         const status = normalizeStatus(q.proposalStatus)
         const total = (q.proposalItems || []).reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.price) || 0), 0)
         return {
-          quoteNumber: q.quoteNumber, client: q.clientName || q.client || '-', date: q.quoteDate || '-',
+          id: q.id, quoteNumber: q.quoteNumber, client: q.clientName || q.client || '-', date: q.quoteDate || '-',
+          subheader: q.subheader || '',
           total: fmtAmount(total, q.currency || '$'),
           currency: q.currency || '$',
           status, statusLabel: STATUS_LABELS[status] || 'Borrador',
@@ -912,7 +1066,7 @@ async function seedSampleData() {
 
   const samples = [
     {
-      quoteNumber: 'CT-PS-001-2026', quoteDate: '2026-07-15', clientName: 'Constructora Los Andes',
+      quoteNumber: 'DEMO-001-2026', quoteDate: '2026-07-15', clientName: 'Constructora Los Andes',
       subheader: 'INSPECCIÓN DE LOSA EDIFICIO CORPORATIVO', proposalStatus: 'adjudicada', awardAmount: 12500000,
       contactPerson: 'Carlos Muñoz', companyResp: 'Juan Pérez', companyRespSig: 'Juan Pérez',
       clientResp: 'Carlos Muñoz', clientRespSig: 'Carlos Muñoz',
@@ -934,7 +1088,7 @@ async function seedSampleData() {
       ],
     },
     {
-      quoteNumber: 'CT-PS-002-2026', quoteDate: '2026-07-20', clientName: 'Mina El Teniente',
+      quoteNumber: 'DEMO-002-2026', quoteDate: '2026-07-20', clientName: 'Mina El Teniente',
       subheader: 'ESTUDIO DE SUELOS SECTOR NORTE', proposalStatus: 'revision',
       contactPerson: 'Roberto Ávila', companyResp: 'María Soto', companyRespSig: 'María Soto',
       clientResp: 'Roberto Ávila', clientRespSig: '',
@@ -954,7 +1108,7 @@ async function seedSampleData() {
       ],
     },
     {
-      quoteNumber: 'CT-PS-003-2026', quoteDate: '2026-07-10', clientName: 'Edifica SpA',
+      quoteNumber: 'DEMO-003-2026', quoteDate: '2026-07-10', clientName: 'Edifica SpA',
       subheader: 'INSPECCIÓN TÉCNICA DE OBRA', proposalStatus: 'aprobada', awardAmount: 5800000,
       contactPerson: 'Pablo Rojas', companyResp: 'Juan Pérez',
       proposalItems: [
@@ -972,7 +1126,7 @@ async function seedSampleData() {
       ],
     },
     {
-      quoteNumber: 'CT-PS-004-2026', quoteDate: '2026-07-22', clientName: 'Puentes del Sur',
+      quoteNumber: 'DEMO-004-2026', quoteDate: '2026-07-22', clientName: 'Puentes del Sur',
       subheader: 'LEVANTAMIENTO TOPOGRÁFICO PUENTE MAULE', proposalStatus: 'borrador',
       contactPerson: 'Andrés Salinas',
       proposalItems: [
@@ -989,7 +1143,7 @@ async function seedSampleData() {
       ],
     },
     {
-      quoteNumber: 'CT-PS-005-2026', quoteDate: '2026-07-18', clientName: 'Hormigones Nacionales',
+      quoteNumber: 'DEMO-005-2026', quoteDate: '2026-07-18', clientName: 'Hormigones Nacionales',
       subheader: 'ENSAYOS DE CALIDAD DE HORMIGÓN', proposalStatus: 'enviada',
       contactPerson: 'Luis Vega', companyResp: 'María Soto',
       proposalItems: [
@@ -1009,7 +1163,7 @@ async function seedSampleData() {
       ],
     },
     {
-      quoteNumber: 'CT-PS-006-2026', quoteDate: '2026-07-05', clientName: 'Arquidiseño Ltda',
+      quoteNumber: 'DEMO-006-2026', quoteDate: '2026-07-05', clientName: 'Arquidiseño Ltda',
       subheader: 'CONSULTORÍA ESTRUCTURAL PROYECTO HABITACIONAL', proposalStatus: 'rechazada',
       contactPerson: 'Camila Flores',
       proposalItems: [
@@ -1027,9 +1181,9 @@ async function seedSampleData() {
     },
   ]
 
-  // Backup current counter and set to 6
-  const savedCounter = JSON.parse(localStorage.getItem('presto_counter') || '0')
-  localStorage.setItem('presto_counter', '6')
+  // N.º DEMO-…: fuera de la numeración real (el servidor solo renumera los
+  // PROV-…). Con los CT-PS-001… de antes, cargar los ejemplos pisaba las
+  // propuestas reales que tuvieran esos números.
   const now = Date.now()
 
   samples.forEach((s, si) => {
@@ -1094,9 +1248,6 @@ async function seedSampleData() {
     savedAt: new Date(now + samples.indexOf(s) * 1000).toISOString(),
   }))
   localStorage.setItem('presto_list', JSON.stringify(list))
-
-  // Restore counter (set to last number so new quotes continue from 7)
-  localStorage.setItem('presto_counter', JSON.stringify(Math.max(6, savedCounter)))
 
   if (state.dbConnected) {
     for (const c of sampleClients) await pb.saveClient(c).catch(() => {})
@@ -1234,12 +1385,36 @@ function recalcGanttDeps() {
   })
 }
 function addGanttPhase() {
-  const n = state.ganttPhases.length + 1
+  let n = state.ganttPhases.length + 1
+  while (state.ganttPhases.includes(`FASE ${String(n).padStart(2, '0')}`)) n++
   state.ganttPhases.push(`FASE ${String(n).padStart(2, '0')}`)
+}
+// Las tareas cuelgan de su sección por el NOMBRE, así que renombrar tiene que
+// arrastrarlas. Antes el input escribía el nombre nuevo solo en la sección y
+// sus tareas quedaban apuntando al viejo: dejaban de verse. Ponerle el nombre
+// de otra sección que ya existe UNE las dos: es la forma de devolver a su lugar
+// las tareas que el editor viejo dejó colgando de un nombre a medio escribir
+// (hay propuestas con una sección «i» que era «INFORME FINAL»). Devuelve false
+// si el nombre no se aceptó (vacío) para que el input vuelva atrás.
+function renameGanttPhase(idx, name) {
+  const old = state.ganttPhases[idx]
+  const nuevo = (name || '').trim()
+  if (!nuevo) return false
+  if (nuevo === old) return true
+  state.ganttTasks.forEach(t => { if (t.phase === old) t.phase = nuevo })
+  if (state.ganttPhases.some((p, i) => i !== idx && p === nuevo)) {
+    state.ganttPhases.splice(idx, 1)
+    toast(`Tareas movidas a «${nuevo}»`)
+  } else {
+    state.ganttPhases[idx] = nuevo
+  }
+  return true
 }
 function removeGanttPhase(idx) {
   const phase = state.ganttPhases[idx]
-  if (!phase) return
+  if (phase === undefined) return
+  const n = state.ganttTasks.filter(t => t.phase === phase).length
+  if (n && !confirm(`La sección «${phase}» tiene ${n} tarea(s). ¿Eliminarla junto con sus tareas?`)) return
   state.ganttPhases.splice(idx, 1)
   state.ganttTasks = state.ganttTasks.filter(t => t.phase !== phase)
 }
@@ -1256,6 +1431,34 @@ function trimGanttTasks(span) {
   state.ganttTasks = state.ganttTasks.filter(t => (t.startDay || 0) <= span && (t.endDay || 0) <= span)
   state.ganttSpan = span
   return true
+}
+
+// --- Catálogo → propuesta económica ---
+
+function addCatalogItemToProposal(item) {
+  const row = { desc: item.name, qty: 1, price: Number(item.price) || 0 }
+  // La tabla siempre arranca con una fila vacía: se ocupa esa en vez de dejarla colgando.
+  const only = state.proposalItems.length === 1 ? state.proposalItems[0] : null
+  if (only && !only.desc && !Number(only.price)) Object.assign(only, row)
+  else state.proposalItems.push(row)
+}
+
+// --- Historial de versiones (las escribe el servidor en cada guardado) ---
+
+async function listVersions() {
+  if (!state.dbConnected || !state.quoteId) return []
+  return await pb.getQuoteVersions(state.quoteId)
+}
+
+// Restaurar trae de vuelta el CONTENIDO: textos, ítems, costeo, Gantt, datos
+// del cliente. El N.º, el estado del flujo y las aprobaciones siguen como
+// están: volver a una redacción anterior no deshace una aprobación ni un envío.
+// Restaurar también es un guardado, así que se puede deshacer restaurando la
+// versión de antes.
+async function restoreVersion(versionId) {
+  const v = await pb.getQuoteVersion(versionId)
+  applyContent(v.data || {})
+  return await persistBudget('Versión del ' + hhmm(v.savedAt || v.created) + ' restaurada ✓')
 }
 
 // --- Finanzas: proyectos / ingresos / egresos ---
@@ -1477,14 +1680,15 @@ export function usePresupuesto() {
     recalcSales, addCosteoCategory, removeCosteoCategory, addCosteoItem, removeCosteoItem,
     addCosteoGroup, removeCosteoGroup, addItemToGroup, removeItemFromGroup, findItemByKey, groupTotal,
     syncSelectedToProposal,
-    addGanttTask, removeGanttTask, addGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
+    addGanttTask, removeGanttTask, addGanttPhase, renameGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks, recalcGanttDeps,
     addPropuestaSection, removePropuestaSection, movePropuestaSection, syncPropuestaSections,
+    addCatalogItemToProposal, listVersions, restoreVersion, isFinalNumber,
     saveBudget, loadBudget, loadBudgetByNum, deleteBudget, loadHistorial, loadDashboardData, seedSampleData, loadClients, saveClient, deleteClient, loadCatalog, saveCatalogItem, deleteCatalogItem,
     aprobarPropuesta, enviarARevision, solicitarCambios, enviarACliente, rectificarPropuesta, reenviarACliente, adjudicarPropuesta, rechazarPropuesta,
     loadProyectos, saveProyecto, deleteProyecto,
     loadIngresos, saveIngreso, deleteIngreso,
     loadEgresos, saveEgreso, deleteEgreso,
     crearProyectoDesdePropuesta, proyectoStats,
-    exportCosteoExcel, exportHistorialExcel, exportIngresosExcel, exportEgresosExcel, toast, dbLogin, resetBudget, generateQuoteNumber,
+    exportCosteoExcel, exportHistorialExcel, exportIngresosExcel, exportEgresosExcel, toast, dbLogin, resetBudget,
   }
 }

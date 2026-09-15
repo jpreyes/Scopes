@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { usePresupuesto } from '../stores/presupuesto.js'
-const { state, saveCatalogItem, deleteCatalogItem } = usePresupuesto()
+const { state, saveCatalogItem, deleteCatalogItem, addCatalogItemToProposal, toast } = usePresupuesto()
 
 const editingId = ref(null)
 const form = ref({ name: '', price: 0, unit: 'und', category: '', tipo: 'producto' })
@@ -18,8 +18,10 @@ function submitForm() {
 function confirmDelete(id) {
   if (confirm('¿Eliminar producto?')) deleteCatalogItem(id)
 }
+// Va a la propuesta que esté abierta; el aviso dice cuál, porque desde acá no se ve.
 function useItem(item) {
-  state.proposalItems.push({ desc: item.name, qty: 1, price: item.price })
+  addCatalogItemToProposal(item)
+  toast(`«${item.name}» agregado a ${state.quoteNumber}`)
   state.activeSection = 'propuestas'
   state.activeTab = 'propuesta'
 }

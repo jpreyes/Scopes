@@ -22,8 +22,15 @@ async function load() {
 
 onMounted(load)
 
-function openAdd() { editingId.value = '__new__'; form.value = emptyForm(); error.value = '' }
+// Al editar, la contraseña va detrás de un botón: un campo de clave siempre a
+// la vista es candidato a que el gestor de contraseñas del navegador lo llene
+// con la clave del propio admin, y entonces guardar el cargo de otra persona
+// le cambiaría la contraseña sin que nadie lo decidiera.
+const cambiarClave = ref(false)
+
+function openAdd() { editingId.value = '__new__'; form.value = emptyForm(); error.value = ''; cambiarClave.value = false }
 function openEdit(u) {
+  cambiarClave.value = false
   editingId.value = u.id
   form.value = { name: u.name || '', email: u.email || '', cargo: u.cargo || '', role: u.role || 'user', password: '' }
   error.value = ''
@@ -38,13 +45,13 @@ async function submitForm() {
     if (editingId.value === '__new__') {
       if (!f.password || f.password.length < 8) { error.value = 'La contraseña debe tener al menos 8 caracteres.'; return }
       await pb.saveUser({
-        email: f.email, password: f.password, passwordConfirm: f.password,
+        email: f.email.trim().toLowerCase(), password: f.password, passwordConfirm: f.password,
         name: f.name, cargo: f.cargo, role: f.role,
         emailVisibility: true, verified: true,
       })
     } else {
       const body = { id: editingId.value, name: f.name, cargo: f.cargo, role: f.role, emailVisibility: true }
-      if (f.password) {
+      if (cambiarClave.value && f.password) {
         if (f.password.length < 8) { error.value = 'La contraseña debe tener al menos 8 caracteres.'; return }
         body.password = f.password
         body.passwordConfirm = f.password
@@ -85,9 +92,11 @@ async function confirmDelete(u) {
           <option value="user">Usuario</option>
           <option value="admin">Administrador</option>
         </select>
-        <input v-model="form.password" type="password" autocomplete="new-password"
-          :placeholder="editingId === '__new__' ? 'Contraseña * (mín. 8)' : 'Nueva contraseña (dejar vacío para no cambiar)'"
+        <input v-if="editingId === '__new__' || cambiarClave" v-model="form.password" type="password" autocomplete="new-password"
+          :placeholder="editingId === '__new__' ? 'Contraseña * (mín. 8)' : 'Nueva contraseña (mín. 8)'"
           class="px-3 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface sm:col-span-2" />
+        <button v-else type="button" @click="cambiarClave = true; form.password = ''"
+          class="sm:col-span-2 justify-self-start text-xs font-semibold text-primary hover:underline cursor-pointer">Cambiar contraseña…</button>
       </div>
       <div class="flex gap-2">
         <button @click="submitForm" class="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">Guardar</button>

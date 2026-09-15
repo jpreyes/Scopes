@@ -32,8 +32,13 @@ async function api(method, path, body) {
 // El token igual caduca en el servidor; `refreshUser()` lo renueva al arrancar,
 // así que usar la app la mantiene viva y una cuenta revocada deja de entrar.
 
+// PocketBase compara el correo tal cual: «Nombre.apellido@…» (el teclado del
+// teléfono pone la mayúscula solo) no es «nombre.apellido@…» y el login decía
+// «credenciales inválidas» con la contraseña correcta. Todas las cuentas se
+// crean en minúsculas, así que el correo se normaliza antes de enviarlo.
 export async function loginUser(email, password) {
-  const data = await api('POST', '/api/collections/users/auth-with-password', { identity: email, password })
+  const identity = String(email || '').trim().toLowerCase()
+  const data = await api('POST', '/api/collections/users/auth-with-password', { identity, password })
   userToken = data.token
   localStorage.setItem('pb_user_token', data.token)
   localStorage.setItem('pb_user', JSON.stringify(data.record))
@@ -150,6 +155,36 @@ export async function saveQuote(quote) {
 
 export async function deleteQuote(id) {
   await api('DELETE', '/api/collections/quotes/records/' + id)
+}
+
+// El editor guarda por id y no por N.º: el N.º cambia al aprobarse (provisorio
+// → final) y, cuando se guardaba por número, dos propuestas con el mismo N.º se
+// pisaban una a la otra.
+export async function getQuote(id, fields) {
+  return await api('GET', '/api/collections/quotes/records/' + id + (fields ? '?fields=' + encodeURIComponent(fields) : ''))
+}
+
+export async function createQuote(quote) {
+  const body = { ...quote }; delete body.id
+  return await api('POST', '/api/collections/quotes/records', body)
+}
+
+export async function updateQuote(id, quote) {
+  const body = { ...quote }; delete body.id
+  return await api('PATCH', '/api/collections/quotes/records/' + id, body)
+}
+
+// --- Versiones (las escribe el hook del servidor; acá solo se leen) ---
+
+export async function getQuoteVersions(quoteId) {
+  const q = '?perPage=100&sort=-created&fields=id,created,savedBy,savedAt,status,total,currency,quoteNumber'
+    + '&filter=' + encodeURIComponent(`quoteId="${quoteId}"`)
+  const data = await api('GET', '/api/collections/quote_versions/records' + q)
+  return data.items
+}
+
+export async function getQuoteVersion(id) {
+  return await api('GET', '/api/collections/quote_versions/records/' + id)
 }
 
 export async function getQuoteByNum(quoteNumber) {

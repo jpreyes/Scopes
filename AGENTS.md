@@ -92,6 +92,29 @@
 - **Título del servicio** = `state.subheader`, con campo propio arriba del Documento (antes era un input sin rótulo en la cabecera de la app). Es el título de la portada; el mandante sale de `headerClient || clientName` y el contacto de `contactPerson`.
 - **Gantt**: las tareas cuelgan de su sección por el NOMBRE (`task.phase`). El input de la sección usa `:value` + `@change` → `renameGanttPhase()`, que arrastra las tareas (renombrar a un nombre existente une las secciones), y el `v-for` de secciones va con `:key` por índice — con el nombre como key cada tecla rehacía la fila y el campo perdía el foco. `applyContent()` recupera como sección las tareas cuyo `phase` no está en `ganttPhases`.
 
+## Responsive (teléfono)
+
+El objetivo es 390 px de ancho. La app **no scrollea de lado**: cada vista ancha
+tiene versión propia en vez de una tabla que se sale.
+
+- **Toda tabla con `min-w-[…]` lleva su lista de tarjetas**: `<div class="sm:hidden">`
+  (o `md:hidden` si la tabla pide más de ~700 px) con las tarjetas, y la tabla en
+  `hidden sm:block` / `hidden md:block`. Así están la propuesta económica
+  (`PropuestaTab`), la lista de propuestas (`HistorialTab`), el catálogo y los
+  ingresos/egresos. Cuando el `v-else` de la lista vacía tiene que envolver las
+  dos versiones, va como `<template v-else>`.
+- **Carta Gantt**: `GanttMobile.vue` (tarjeta por tarea, con días y barra
+  proporcional) bajo `md`, la grilla `hidden md:block` desde ahí. Edita con las
+  mismas funciones del store, así que no hay dos lógicas.
+- **Nada de `<select>` sin ancho fijo en una fila estrecha**: se estira hasta su
+  opción más larga y aplasta a su vecino (el nombre del ítem del costeo quedaba
+  en 94 px por el selector «→ grupo»).
+- Para verificarlo: el guion `mobile.mjs` de la carpeta de trabajo recorre las
+  vistas a 390 px, avisa si `documentElement.scrollWidth > 390`, lista lo que se
+  sale de pantalla y captura cada vista; `diag.mjs` lista los campos de menos de
+  110 px con su linaje. Ambos corren con Chromium en Docker (**no hay node en el
+  VPS**), contra un PocketBase desechable.
+
 ## Margin Formulas
 | Mode | Formula |
 |------|---------|

@@ -72,7 +72,47 @@ function statusClass(s) {
       <p class="text-sm">No hay presupuestos guardados aún.</p>
     </div>
 
-    <div v-else class="overflow-x-auto">
+    <template v-else>
+    <!-- En teléfono, una tarjeta por propuesta: la tabla pide 900 px y dejaba
+         fuera de pantalla el estado, el total y los botones. -->
+    <div class="md:hidden space-y-2">
+      <div v-for="b in state.budgetList" :key="b.quoteNumber"
+        class="border border-border rounded-xl p-3 bg-surface shadow-sm"
+        :class="requiereAprobacion(b) ? 'ring-1 ring-amber-300 bg-amber-50/60' : ''">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-sm font-mono font-semibold text-text truncate">{{ b.quoteNumber }}</p>
+            <p class="text-sm text-text truncate">{{ b.client || '-' }}</p>
+            <p v-if="b.subheader" class="text-[11px] text-text-dim truncate">{{ b.subheader }}</p>
+          </div>
+          <span class="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full" :class="statusClass(b.status)">{{ b.statusLabel }}</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-2 pt-2 border-t border-border-light">
+          <span class="text-[11px] text-text-muted">{{ b.date || '-' }}</span>
+          <span class="text-sm font-bold text-text">{{ b.total }}</span>
+        </div>
+        <p v-if="requiereAprobacion(b)" class="mt-1.5 text-[10px] font-semibold text-amber-700">
+          Requiere aprobación · {{ aprobadores(b).size }}/2
+        </p>
+        <p class="mt-1 text-[10px] text-text-dim truncate">
+          <span v-if="b.createdBy">Creó {{ b.createdBy }}</span>
+          <span v-if="b.updatedBy"> · Modificó {{ b.updatedBy }}{{ b.updatedAt ? ' (' + fmtStamp(b.updatedAt) + ')' : '' }}</span>
+        </p>
+        <div class="flex gap-1.5 mt-2.5">
+          <button @click="editar(b.quoteNumber)"
+            class="flex-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition cursor-pointer"
+            :class="requiereAprobacion(b) ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-700'">
+            {{ requiereAprobacion(b) ? 'Ingresar' : 'Editar' }}
+          </button>
+          <button v-if="b.status === 'adjudicada'" @click="crearProyectoDesdePropuesta(b.quoteNumber)"
+            class="px-2.5 py-1.5 text-[11px] font-semibold bg-primary-light text-primary rounded-md transition cursor-pointer">→ Proyecto</button>
+          <button @click="deleteBudget(b.quoteNumber)"
+            class="px-2.5 py-1.5 text-[11px] font-semibold bg-gray-100 text-red-500 rounded-md transition cursor-pointer">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden md:block overflow-x-auto">
       <table class="w-full min-w-[900px]">
         <thead>
           <tr class="bg-slate-800 text-white text-[11px] uppercase tracking-wider">
@@ -140,5 +180,6 @@ function statusClass(s) {
         </tbody>
       </table>
     </div>
+    </template>
   </div>
 </template>

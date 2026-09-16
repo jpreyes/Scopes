@@ -94,7 +94,30 @@ function toggleEstado(r) {
       <p class="text-sm">No hay ingresos registrados.</p>
     </div>
 
-    <div v-else class="bg-surface border border-border rounded-xl shadow-sm overflow-x-auto">
+    <template v-else>
+    <!-- En teléfono, tarjetas: la tabla pide 720 px. -->
+    <div class="md:hidden space-y-2">
+      <div v-for="r in state.ingresos" :key="r.id" class="bg-surface border border-border rounded-xl p-3 shadow-sm">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text">{{ r.concepto }}</p>
+            <p class="text-[11px] text-text-dim truncate">{{ r.fecha || '-' }}<span v-if="r.proyecto"> · {{ r.proyecto }}</span></p>
+          </div>
+          <button @click="confirmDelete(r.id)" class="shrink-0 text-text-dim hover:text-danger transition text-xs px-1 cursor-pointer" title="Eliminar">✕</button>
+        </div>
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-border-light">
+          <button @click="toggleEstado(r)"
+            class="text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer border"
+            :class="r.estado === 'recibido' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'">
+            {{ r.estado === 'recibido' ? 'Recibido' : 'Programado' }}
+          </button>
+          <span class="text-sm font-bold text-text">{{ fmtMoney(r.monto, r.moneda) }}</span>
+        </div>
+        <p v-if="r.metodo || r.comprobante" class="mt-1 text-[10px] text-text-dim truncate">{{ r.metodo }}<span v-if="r.comprobante"> · {{ r.comprobante }}</span></p>
+      </div>
+    </div>
+
+    <div class="hidden md:block bg-surface border border-border rounded-xl shadow-sm overflow-x-auto">
       <table class="w-full text-xs min-w-[720px]">
         <thead>
           <tr class="bg-bg-app text-text-muted uppercase tracking-wider text-[10px]">
@@ -130,5 +153,6 @@ function toggleEstado(r) {
         </tbody>
       </table>
     </div>
+    </template>
   </div>
 </template>

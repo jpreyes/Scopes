@@ -1,6 +1,7 @@
 <script setup>
 import { usePresupuesto } from '../stores/presupuesto.js'
 import RichTextEditor from './RichTextEditor.vue'
+import GanttMobile from './GanttMobile.vue'
 import { computed, ref } from 'vue'
 
 // OJO: todo lo que el template llama tiene que estar en esta lista. Faltaban
@@ -153,7 +154,6 @@ function ganttBarStyle(t) {
       <input id="titulo-servicio" type="text" v-model="state.subheader"
         placeholder="Ej: Inspección estructural de losa — Edificio Corporativo"
         class="w-full border border-border rounded-lg px-3 py-1.5 text-base font-semibold focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition bg-surface" />
-      <p class="mt-1 text-[10px] text-text-dim">Es el título de la portada. El mandante sale del bloque Cliente y el contacto, del campo de abajo.</p>
     </div>
 
     <!-- Reference row -->
@@ -269,7 +269,9 @@ function ganttBarStyle(t) {
           <input type="number" v-model.number="state.awardAmount" min="0" class="w-28 px-2 py-1 border border-border rounded text-xs text-right bg-surface outline-none focus:border-primary" />
         </div>
       </template>
-      <div class="flex items-center gap-2 text-xs flex-1 min-w-0">
+      <!-- En teléfono, las notas ocupan su propia línea: compartiendo fila con
+           el estado el campo quedaba en 47 px. -->
+      <div class="flex items-center gap-2 text-xs w-full sm:w-auto sm:flex-1 min-w-0">
         <span class="font-semibold text-text-muted uppercase shrink-0">Notas:</span>
         <input type="text" v-model="state.projectNotes" placeholder="Notas del proyecto…" class="flex-1 min-w-0 px-2 py-1 border border-border rounded text-xs bg-surface outline-none focus:border-primary" />
       </div>
@@ -364,7 +366,36 @@ function ganttBarStyle(t) {
         <span class="w-1 h-4 bg-emerald-500 rounded-full inline-block"></span>
         PROPUESTA ECONÓMICA
       </h2>
-      <div class="border border-border/80 rounded-xl overflow-x-auto shadow-sm">
+      <!-- En teléfono, una tarjeta por ítem: la tabla necesita 560 px y dejaba
+           la descripción y los montos fuera de la pantalla. -->
+      <div class="sm:hidden space-y-2">
+        <div v-for="(it, i) in state.proposalItems" :key="i" class="border border-border/80 rounded-xl p-3 bg-surface shadow-sm">
+          <div class="flex items-start gap-2">
+            <span class="text-[10px] font-mono text-text-dim pt-2.5">{{ i+1 }}.1</span>
+            <input type="text" v-model="it.desc" placeholder="Descripción"
+              class="flex-1 min-w-0 px-2 py-1.5 border border-border rounded-lg text-sm outline-none focus:border-primary bg-surface" />
+            <button @click="removeProposalItem(i)" class="text-danger hover:text-red-600 text-lg px-1 pt-1 shrink-0 transition cursor-pointer">&times;</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <label class="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+              Cantidad
+              <input type="number" v-model.number="it.qty" min="1"
+                class="w-full mt-0.5 px-2 py-1.5 border border-border rounded-lg text-sm text-right outline-none focus:border-primary bg-surface" />
+            </label>
+            <label class="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+              P. unitario
+              <input type="number" v-model.number="it.price" min="0"
+                class="w-full mt-0.5 px-2 py-1.5 border border-border rounded-lg text-sm text-right outline-none focus:border-primary bg-surface" />
+            </label>
+          </div>
+          <div class="flex justify-between items-baseline mt-2 pt-2 border-t border-border-light">
+            <span class="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Total</span>
+            <span class="text-sm font-bold text-text">{{ fmt((it.qty||0)*(it.price||0)) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hidden sm:block border border-border/80 rounded-xl overflow-x-auto shadow-sm">
         <!-- Las columnas fijas ya suman ~390 px: sin `min-w` la descripción
              quedaba en un hilo en vez de scrollear. -->
         <table class="w-full min-w-[560px]">
@@ -417,7 +448,7 @@ function ganttBarStyle(t) {
     </section>
 
     <!-- Totals -->
-    <div class="ml-auto w-80 mb-5 bg-gradient-to-br from-gray-50/80 to-white border border-border/80 rounded-xl p-4 shadow-sm">
+    <div class="w-full sm:w-80 sm:ml-auto mb-5 bg-gradient-to-br from-gray-50/80 to-white border border-border/80 rounded-xl p-4 shadow-sm">
       <div class="flex justify-between py-1.5">
         <span class="text-sm text-text-muted">Subtotal</span>
         <span class="text-sm font-semibold text-text">{{ fmt(storeComputed.proposalSubtotal.value) }}</span>
@@ -442,7 +473,10 @@ function ganttBarStyle(t) {
         <span class="w-1 h-4 bg-violet-500 rounded-full inline-block"></span>
         CARTA GANTT
       </h2>
-      <div class="overflow-x-auto border border-border/80 rounded-xl shadow-sm">
+      <!-- La grilla pide ~700 px: en teléfono va la vista en tarjetas. -->
+      <GanttMobile class="md:hidden" />
+
+      <div class="hidden md:block overflow-x-auto border border-border/80 rounded-xl shadow-sm">
         <table class="w-full text-xs border-collapse">
           <thead>
             <tr class="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
@@ -505,9 +539,11 @@ function ganttBarStyle(t) {
           </tbody>
         </table>
       </div>
-      <button @click="addGanttPhase()" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar sección</button>
-      <div class="mt-1.5 text-[10px] text-text-dim">
-        <span>{{ state.ganttSpan }} {{ { hour: 'horas', day: 'días', week: 'semanas', month: 'meses', year: 'años' }[state.ganttUnit] || 'unidades' }} de alcance</span>
+      <div class="hidden md:block">
+        <button @click="addGanttPhase()" class="mt-2 px-3 py-1.5 text-xs text-text-muted border border-dashed border-border rounded-lg hover:bg-surface hover:border-primary-border transition cursor-pointer">+ Agregar sección</button>
+        <div class="mt-1.5 text-[10px] text-text-dim">
+          <span>{{ state.ganttSpan }} {{ { hour: 'horas', day: 'días', week: 'semanas', month: 'meses', year: 'años' }[state.ganttUnit] || 'unidades' }} de alcance</span>
+        </div>
       </div>
     </section>
 

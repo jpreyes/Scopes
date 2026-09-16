@@ -899,15 +899,31 @@ async function loadBudget() {
   if (!isNaN(idx) && idx >= 0 && idx < list.length) await loadBudgetByNum(list[idx].quoteNumber)
 }
 
-function deleteBudget(qn) {
+// Se espera a que el servidor confirme el borrado ANTES de recargar la lista:
+// recargarla en el mismo suspiro traía de vuelta la propuesta —todavía no
+// borrada— y había que apretar Eliminar dos veces.
+async function deleteBudget(qn) {
   if (!confirm(`¿Eliminar ${qn}?`)) return
-  localStorage.removeItem('presto_' + qn.replace(/\//g, '_'))
+  localStorage.removeItem(lsKey(qn))
   let list = JSON.parse(localStorage.getItem('presto_list') || '[]')
-  list = list.filter(x => x.quoteNumber !== qn)
-  localStorage.setItem('presto_list', JSON.stringify(list))
-  if (state.dbConnected) pb.deleteQuoteByNum(qn).catch(() => {})
+  localStorage.setItem('presto_list', JSON.stringify(list.filter(x => x.quoteNumber !== qn)))
+  if (state.dbConnected) {
+    const item = state.budgetList.find(x => x.quoteNumber === qn)
+    try {
+      if (item && item.id) await pb.deleteQuote(item.id)
+      else await pb.deleteQuoteByNum(qn)
+    } catch (e) {
+      toast('No se pudo eliminar: ' + (e.message || 'error del servidor'))
+      loadHistorial()
+      return
+    }
+  }
+  // Si la borrada era la que está abierta, deja de tener registro: un guardado
+  // posterior la crea de nuevo en vez de fallar contra un id que ya no existe.
+  if (state.quoteNumber === qn) state.quoteId = ''
   loadHistorial()
   loadDashboardData()
+  toast('Propuesta eliminada')
 }
 
 function loadHistorial() {
@@ -1291,10 +1307,13 @@ function fallbackSaveClient(client) {
   loadClients()
   toast('Cliente guardado ✓')
 }
-function deleteClient(id) {
-  if (state.dbConnected) {
-    pb.deleteClient(id).catch(() => fallbackDeleteClient(id))
-  } else { fallbackDeleteClient(id) }
+// Igual que con las propuestas: primero el servidor, después la lista. Antes
+// no se recargaba nada al borrar con éxito y el registro seguía en pantalla.
+async function deleteClient(id) {
+  if (!state.dbConnected) { fallbackDeleteClient(id); return }
+  try { await pb.deleteClient(id) } catch (_) { fallbackDeleteClient(id); return }
+  loadClients()
+  toast('Cliente eliminado ✓')
 }
 function fallbackDeleteClient(id) {
   const list = JSON.parse(localStorage.getItem('presto_clients') || '[]')
@@ -1328,10 +1347,11 @@ function fallbackSaveCatalogItem(item) {
   loadCatalog()
   toast('Producto guardado ✓')
 }
-function deleteCatalogItem(id) {
-  if (state.dbConnected) {
-    pb.deleteCatalogItem(id).catch(() => fallbackDeleteCatalogItem(id))
-  } else { fallbackDeleteCatalogItem(id) }
+async function deleteCatalogItem(id) {
+  if (!state.dbConnected) { fallbackDeleteCatalogItem(id); return }
+  try { await pb.deleteCatalogItem(id) } catch (_) { fallbackDeleteCatalogItem(id); return }
+  loadCatalog()
+  toast('Producto eliminado ✓')
 }
 function fallbackDeleteCatalogItem(id) {
   const list = JSON.parse(localStorage.getItem('presto_catalog') || '[]')
@@ -1491,10 +1511,11 @@ function fallbackSaveProyecto(proyecto) {
   loadProyectos()
   toast('Proyecto guardado ✓')
 }
-function deleteProyecto(id) {
-  if (state.dbConnected) {
-    pb.deleteProyecto(id).catch(() => fallbackDeleteProyecto(id))
-  } else { fallbackDeleteProyecto(id) }
+async function deleteProyecto(id) {
+  if (!state.dbConnected) { fallbackDeleteProyecto(id); return }
+  try { await pb.deleteProyecto(id) } catch (_) { fallbackDeleteProyecto(id); return }
+  loadProyectos()
+  toast('Proyecto eliminado ✓')
 }
 function fallbackDeleteProyecto(id) {
   const list = JSON.parse(localStorage.getItem('presto_proyectos') || '[]')
@@ -1529,10 +1550,11 @@ function fallbackSaveIngreso(ingreso) {
   loadIngresos()
   toast('Ingreso guardado ✓')
 }
-function deleteIngreso(id) {
-  if (state.dbConnected) {
-    pb.deleteIngreso(id).catch(() => fallbackDeleteIngreso(id))
-  } else { fallbackDeleteIngreso(id) }
+async function deleteIngreso(id) {
+  if (!state.dbConnected) { fallbackDeleteIngreso(id); return }
+  try { await pb.deleteIngreso(id) } catch (_) { fallbackDeleteIngreso(id); return }
+  loadIngresos()
+  toast('Ingreso eliminado ✓')
 }
 function fallbackDeleteIngreso(id) {
   const list = JSON.parse(localStorage.getItem('presto_ingresos') || '[]')
@@ -1567,10 +1589,11 @@ function fallbackSaveEgreso(egreso) {
   loadEgresos()
   toast('Egreso guardado ✓')
 }
-function deleteEgreso(id) {
-  if (state.dbConnected) {
-    pb.deleteEgreso(id).catch(() => fallbackDeleteEgreso(id))
-  } else { fallbackDeleteEgreso(id) }
+async function deleteEgreso(id) {
+  if (!state.dbConnected) { fallbackDeleteEgreso(id); return }
+  try { await pb.deleteEgreso(id) } catch (_) { fallbackDeleteEgreso(id); return }
+  loadEgresos()
+  toast('Egreso eliminado ✓')
 }
 function fallbackDeleteEgreso(id) {
   const list = JSON.parse(localStorage.getItem('presto_egresos') || '[]')

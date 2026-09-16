@@ -108,8 +108,8 @@ const newGroupName = ref('')
           class="border border-border rounded-xl overflow-hidden bg-surface hover:shadow-lg transition">
 
           <div draggable="true" @dragstart="onDragStartCategory($event, cat)"
-            class="flex justify-between items-center px-4 py-2.5 bg-surface/50 border-b border-border cursor-grab hover:bg-surface transition">
-            <div class="flex items-center gap-1 flex-1 min-w-0">
+            class="flex flex-wrap justify-between items-center gap-y-1 px-4 py-2.5 bg-surface/50 border-b border-border cursor-grab hover:bg-surface transition">
+            <div class="flex items-center gap-1 flex-1 min-w-[9rem]">
               <span class="text-text-dim shrink-0 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
@@ -121,7 +121,7 @@ const newGroupName = ref('')
                  para poder mandar la misma categoría a dos grupos seguidos. -->
             <select v-if="state.costeoGroups.length" draggable="false"
               :value="''" @change="asignarCategoria(cat, $event.target.value); $event.target.value = ''"
-              class="ml-2 shrink-0 px-1.5 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+              class="ml-2 shrink-0 w-16 sm:w-auto px-1 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
               title="Agregar toda la categoría a un grupo">
               <option value="">→ grupo</option>
               <option v-for="g in state.costeoGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
@@ -135,40 +135,55 @@ const newGroupName = ref('')
               @dragstart="onDragStart($event, it._key)"
               class="flex items-center gap-2 p-2 mb-1 bg-surface/50 border border-border-light rounded-lg hover:border-blue-400 transition cursor-grab">
 
-              <span class="text-text-dim shrink-0 flex items-center">
+              <!-- El asa de arrastre no va en teléfono: ahí no hay drag & drop
+                   (se usa el «→»), y se comía el ancho del nombre, que quedaba
+                   en 8 px. -->
+              <span class="hidden sm:flex text-text-dim shrink-0 items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
 
               <div class="flex-1 min-w-0">
-                <input type="text" v-model="it.desc" class="w-full px-2 py-1 border border-transparent rounded text-sm font-semibold outline-none focus:border-primary focus:bg-surface transition" />
-                <div class="flex gap-2 mt-1 flex-wrap items-center">
+                <div class="flex items-center gap-1">
+                  <input type="text" v-model="it.desc" class="flex-1 min-w-0 px-2 py-1 border border-transparent rounded text-sm font-semibold outline-none focus:border-primary focus:bg-surface transition" />
+                  <!-- Ancho fijo: un <select> se estira hasta el nombre de grupo
+                       más largo y le comía el espacio al nombre del ítem. -->
+                  <select v-if="state.costeoGroups.length" draggable="false"
+                    :value="''" @change="asignarItem(it._key, $event.target.value); $event.target.value = ''"
+                    class="sm:hidden shrink-0 w-11 px-1 py-1 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+                    title="Agregar a un grupo">
+                    <option value="">→</option>
+                    <option v-for="g in state.costeoGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
+                  </select>
+                  <button @click="removeCosteoItem(cat, i)" class="sm:hidden text-red-400 hover:text-red-600 text-lg px-1 transition cursor-pointer shrink-0">&times;</button>
+                </div>
+                <div class="grid grid-cols-2 sm:flex gap-2 mt-1.5 sm:flex-wrap items-center">
                   <label class="text-[10px] text-text-dim flex items-center gap-1">
-                    C. <input type="number" v-model.number="it.qty" min="0" class="w-12 px-1 py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
+                    C. <input type="number" v-model.number="it.qty" min="0" class="w-full sm:w-12 px-1.5 py-1 sm:py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
                   </label>
                   <label class="text-[10px] text-text-dim flex items-center gap-1">
-                    D. <input type="number" v-model.number="it.days" min="0" class="w-12 px-1 py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
+                    D. <input type="number" v-model.number="it.days" min="0" class="w-full sm:w-12 px-1.5 py-1 sm:py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
                   </label>
                   <label class="text-[10px] text-text-dim flex items-center gap-1">
                     Costo <input type="number" v-model.number="it.cost" min="0" step="1" @input="recalcSales"
-                      class="w-16 px-1 py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
+                      class="w-full sm:w-16 px-1.5 py-1 sm:py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
                   </label>
                   <label class="text-[10px] text-text-dim flex items-center gap-1">
                     Vta <input type="number" v-model.number="it.sale" min="0" step="1"
-                      class="w-16 px-1 py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
+                      class="w-full sm:w-16 px-1.5 py-1 sm:py-0.5 border border-border rounded text-xs text-right outline-none focus:border-primary" />
                   </label>
-                  <span class="text-xs font-bold text-primary min-w-[5rem] text-right">{{ fmt((it.qty||0)*(it.days||0)*(it.sale||0)) }}</span>
+                  <span class="col-span-2 text-xs font-bold text-primary sm:min-w-[5rem] text-right">{{ fmt((it.qty||0)*(it.days||0)*(it.sale||0)) }}</span>
                 </div>
               </div>
 
               <select v-if="state.costeoGroups.length" draggable="false"
                 :value="''" @change="asignarItem(it._key, $event.target.value); $event.target.value = ''"
-                class="shrink-0 px-1.5 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
+                class="hidden sm:block shrink-0 px-1.5 py-0.5 border border-border rounded text-[10px] text-text-muted bg-surface outline-none focus:border-primary cursor-pointer"
                 title="Agregar a un grupo">
                 <option value="">→</option>
                 <option v-for="g in state.costeoGroups" :key="g.id" :value="g.id">{{ g.name }}</option>
               </select>
 
-              <button @click="removeCosteoItem(cat, i)" class="text-red-400 hover:text-red-600 text-lg px-1 opacity-30 hover:opacity-100 transition cursor-pointer shrink-0">&times;</button>
+              <button @click="removeCosteoItem(cat, i)" class="hidden sm:block text-red-400 hover:text-red-600 text-lg px-1 opacity-30 hover:opacity-100 transition cursor-pointer shrink-0">&times;</button>
             </div>
           </div>
 

@@ -82,7 +82,29 @@ const tipoColor = t => t === 'recurso' ? 'bg-blue-100 text-blue-700' : 'bg-slate
       <p class="text-sm">No hay ítems de este tipo.</p>
     </div>
 
-    <div v-else class="overflow-x-auto">
+    <template v-else>
+    <!-- En teléfono, tarjetas: la tabla pide 640 px. -->
+    <div class="sm:hidden space-y-2">
+      <div v-for="item in filtered" :key="item.id" class="border border-border rounded-xl p-3 bg-surface shadow-sm">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text">{{ item.name }}</p>
+            <p class="text-[11px] text-text-dim">{{ item.category || 'Sin categoría' }} · {{ item.unit }}</p>
+          </div>
+          <span class="shrink-0 text-[9px] font-semibold px-2 py-0.5 rounded-full" :class="tipoColor(item.tipo)">{{ tipoLabel(item.tipo) }}</span>
+        </div>
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-border-light">
+          <span class="text-sm font-semibold text-text">$ {{ Number(item.price).toLocaleString('es-CL') }}</span>
+          <div class="flex gap-1.5">
+            <button @click="useItem(item)" class="px-2.5 py-1 text-[11px] font-semibold bg-primary text-white rounded-md transition cursor-pointer">+ Usar</button>
+            <button @click="openEdit(item)" class="px-2 py-1 text-[11px] text-text-muted border border-border rounded-md cursor-pointer">✎</button>
+            <button @click="confirmDelete(item.id)" class="px-2 py-1 text-[11px] text-danger border border-border rounded-md cursor-pointer">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden sm:block overflow-x-auto">
       <table class="w-full text-xs min-w-[640px]">
         <thead>
           <tr class="bg-bg-app text-text-muted uppercase tracking-wider text-[10px]">
@@ -114,5 +136,6 @@ const tipoColor = t => t === 'recurso' ? 'bg-blue-100 text-blue-700' : 'bg-slate
         </tbody>
       </table>
     </div>
+    </template>
   </div>
 </template>

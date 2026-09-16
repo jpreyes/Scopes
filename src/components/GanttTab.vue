@@ -1,5 +1,6 @@
 <script setup>
 import { usePresupuesto } from '../stores/presupuesto.js'
+import GanttMobile from './GanttMobile.vue'
 import { computed } from 'vue'
 
 const { state, addGanttTask, removeGanttTask, addGanttPhase, renameGanttPhase, removeGanttPhase, syncGanttSpan, trimGanttTasks } = usePresupuesto()
@@ -114,11 +115,14 @@ function calcBarStyle(t) {
           class="w-16 px-2 py-1 border border-border rounded-lg text-xs text-right outline-none focus:border-primary" />
         <span class="text-xs text-text-muted">{{ unitLabels[state.ganttUnit] || 'Unidades' }}</span>
         <button @click="addGanttPhase()"
-          class="px-3 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">+ Sección</button>
+          class="hidden md:inline-block px-3 py-1 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary-hover transition cursor-pointer">+ Sección</button>
       </div>
     </div>
 
-    <div class="overflow-x-auto border border-border rounded-xl">
+    <!-- La grilla pide ~700 px: en teléfono va la vista en tarjetas. -->
+    <GanttMobile class="md:hidden" />
+
+    <div class="hidden md:block overflow-x-auto border border-border rounded-xl">
       <table class="w-full text-xs border-collapse">
         <thead>
           <tr class="bg-slate-800 text-white">
@@ -194,7 +198,7 @@ function calcBarStyle(t) {
       </table>
     </div>
 
-    <div class="mt-3 flex gap-4 text-[10px] text-text-dim">
+    <div class="hidden md:flex mt-3 gap-4 text-[10px] text-text-dim">
       <span>Unidad: {{ unitLabels[state.ganttUnit] }} — {{ state.ganttSpan }} {{ unitLabels[state.ganttUnit]?.toLowerCase() }} en total</span>
     </div>
   </div>

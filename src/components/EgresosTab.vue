@@ -93,7 +93,31 @@ function toggleEstado(r) {
       <p class="text-sm">No hay egresos registrados.</p>
     </div>
 
-    <div v-else class="bg-surface border border-border rounded-xl shadow-sm overflow-x-auto">
+    <template v-else>
+    <!-- En teléfono, tarjetas: la tabla pide 820 px. -->
+    <div class="md:hidden space-y-2">
+      <div v-for="r in state.egresos" :key="r.id" class="bg-surface border border-border rounded-xl p-3 shadow-sm">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text">{{ r.concepto }}</p>
+            <p class="text-[11px] text-text-dim truncate">{{ r.fecha || '-' }}<span v-if="r.proyecto"> · {{ r.proyecto }}</span></p>
+          </div>
+          <button @click="confirmDelete(r.id)" class="shrink-0 text-text-dim hover:text-danger transition text-xs px-1 cursor-pointer" title="Eliminar">✕</button>
+        </div>
+        <div class="flex items-center gap-2 mt-2 pt-2 border-t border-border-light">
+          <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ r.categoria || 'Otros' }}</span>
+          <button @click="toggleEstado(r)"
+            class="text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer border"
+            :class="r.estado === 'pagado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-100 text-amber-700 border-amber-200'">
+            {{ r.estado === 'pagado' ? 'Pagado' : 'Pendiente' }}
+          </button>
+          <span class="ml-auto text-sm font-bold text-text">{{ fmtMoney(r.monto, r.moneda) }}</span>
+        </div>
+        <p v-if="r.beneficiario" class="mt-1 text-[10px] text-text-dim truncate">{{ r.beneficiario }}</p>
+      </div>
+    </div>
+
+    <div class="hidden md:block bg-surface border border-border rounded-xl shadow-sm overflow-x-auto">
       <table class="w-full text-xs min-w-[820px]">
         <thead>
           <tr class="bg-bg-app text-text-muted uppercase tracking-wider text-[10px]">
@@ -131,5 +155,6 @@ function toggleEstado(r) {
         </tbody>
       </table>
     </div>
+    </template>
   </div>
 </template>

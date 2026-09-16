@@ -120,7 +120,10 @@ onMounted(() => {
 
         <div class="flex-1 min-w-0">
           <!-- TABS (solo para sección propuestas, fuera de la lista) -->
-          <div v-if="state.activeSection === 'propuestas' && state.activeTab !== 'historial'" class="flex overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print items-stretch">
+          <!-- En teléfono las pestañas se envuelven en vez de scrollear: la
+               última («Costeo Interno») quedaba cortada en el borde y no se
+               veía que estuviera ahí. -->
+          <div v-if="state.activeSection === 'propuestas' && state.activeTab !== 'historial'" class="flex flex-wrap sm:flex-nowrap sm:overflow-x-auto border-b border-border bg-bg-app px-4 sm:px-6 no-print items-stretch">
             <button @click="state.activeTab = 'historial'"
               class="flex items-center gap-1.5 pr-4 mr-2 my-2 text-xs font-semibold text-text-muted border-r border-border hover:text-primary transition cursor-pointer shrink-0">
               <span>←</span> Lista
